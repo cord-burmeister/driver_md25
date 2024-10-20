@@ -20,7 +20,7 @@
 // #include <std_msgs/msg/multi_arrayLayout.h>
 // #include <std_msgs/msg/int16_multiArray.h>
 // #include <std_msgs/msg/int32_multiArray.h>
-// #include <std_msgs/msg/byte_multiArray.h>
+#include <std_msgs/msg/byte_multi_array.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <geometry_msgs/msg/quaternion.h>
@@ -41,15 +41,13 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr motor_twist_subscriber_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr  odom_publisher_;  
   
-  // TODO   
-  // ros::Publisher current_speed_publisher_;
-  // ros::Publisher motor_status_publisher_;
-  // ROS1 ros::ServiceServer stop_motor_server_;
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_motor_server_;
+  rclcpp::Publisher<std_msgs::msg::ByteMultiArray>::SharedPtr current_speed_publisher_;
+  rclcpp::Publisher<std_msgs::msg::ByteMultiArray>::SharedPtr motor_status_publisher_;
 
-  // ROS1 ros::ServiceServer reset_encoders_server_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_motor_server_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_encoders_server_;
   
+  rclcpp::TimerBase::SharedPtr current_speed_timer_;
   // ros::Timer current_speed_timer_;
   // ros::Timer motor_speed_timer_;
   rclcpp::TimerBase::SharedPtr motor_status_timer_;
@@ -70,7 +68,9 @@ private:
   bool enable_speed_ = false;
   bool enable_odom_ = false;
   bool enable_pid_ = false;
-  bool enable_twist_ = false;
+  
+  const bool enable_twist_default = true;
+  bool enable_twist_ = enable_twist_default;
   bool enable_status_ = false;
   double wheelDiameter = 0.210;
   double wheelTrack = 0.345;
@@ -80,10 +80,27 @@ private:
   double max_linear_x = 1.0;
   double max_angular_z = 1.0;
   
+  //   Mode Register
+  // The mode register selects which mode of operation and I2C data input type the user requires. The options being:
+  // 0,    (default setting) If a value of 0 is written to the mode register then the meaning of the speed registers is literal speeds in the range of 0 (full reverse)  128 (stop)   255 (full forward).
+  // 1,    Mode 1 is similar to mode 0, except that the speed registers are interpreted as signed values. The meaning of the speed registers is literal speeds in the range of -128 (full reverse)   0 (Stop)   127 (full forward).
+  // 2,    Writing a value of  2 to the mode register will make Speed1 control both motors speed, and Speed2 becomes the turn value. 
+  // Data is in the range of 0 (full reverse)  128 (stop)  255 (full  forward).
+  // 3,    Mode 3 is similar to mode 2, except that the speed registers are interpreted as signed values. 
+  // Data is in the range of -128  (full reverse)  0 (stop)   127 (full forward)
   int motor_mode_ = 1;
   int max_speed_ = 100;
   bool moving = false;
+  // Acceleration Rate 
+  // If you require a controlled acceleration period for the attached motors to reach there ultimate speed, the MD25 has a register to provide this. 
+  // It works by using a value into the acceleration register and incrementing the power by that value. Changing between the current speed of the motors 
+  // and the new speed (from speed 1 and 2 registers). So if the motors were traveling at full speed in the forward direction (255) and were instructed 
+  // to move at full speed in reverse (0), there would be 255 steps with an acceleration register value of 1, but 128 for a value of 2. 
+  // The default acceleration value is 5, meaning the speed is changed from full forward to full reverse in 1.25 seconds. The register will accept values 
+  // of 1 up to 10 which equates to a period of only 0.65 seconds to travel from full speed in one direction to full speed in the opposite direction.
+  // See https://www.robot-electronics.co.uk/htm/md25i2c.htm
   int acceleration_rate = 3;
+
 //-------------------------------------------------
 double Kp = 2.0;
 double Ki = 0.5;
@@ -131,27 +148,40 @@ Pose pose;
 public:
   std::unique_ptr<md25_driver> motor;
 //---------------------------------------
- MD25MotorDriverROSWrapper() : Node("bus_master") {
+ MD25MotorDriverROSWrapper(const rclcpp::NodeOptions & options) : Node("bus_master", options) {
 
     odomInfo.OdomStamp = this->get_clock()->now();
-    // this->declare_parameter<double>("publish_current_speed_frequency", 1.0);
-    // this->declare_parameter<double>("publish_motor_status_frequency", 1.0);
-    // this->declare_parameter<bool>("enable_odom", false);    
+
+    this->declare_parameter<double>("publish_current_speed_frequency", 10.0);
+    this->declare_parameter<double>("publish_motor_status_frequency", 10.0);
+    this->declare_parameter<double>("publish_odom_frequency", 10.0);
+    this->declare_parameter<bool>("enable_odom", false);    
+    this->declare_parameter<bool>("enable_status", false);       
+    this->declare_parameter<bool>("enable_twist", enable_twist_default);    
 
     setParams();
     //------------------------------------------
     motor.reset(new md25_driver("/dev/i2c-1"));
     bool setup = motor->setup(this->get_logger ());
-    bool mode1 = motor->setMode(this->get_logger (), motor_mode_);
-    bool accel = motor->setAccelerationRate(this->get_logger (), acceleration_rate);
+    bool mode1 = motor->setMode(this->get_logger (), motor->getDeviceIdFront(), motor_mode_);
+    bool accel = motor->setAccelerationRate(this->get_logger (), motor->getDeviceIdFront(), acceleration_rate);
+    
     if(!setup){
       RCLCPP_ERROR(this->get_logger(), "failed to setup motor driver!");
     }
+
     if(!mode1){
       RCLCPP_ERROR(this->get_logger(), "failed to set motor to mode %d!",motor_mode_);
     }else{
       RCLCPP_INFO(this->get_logger(),"MD25 Motor Mode set to %d",motor_mode_);
     }
+
+    if(!accel){
+      RCLCPP_ERROR(this->get_logger(), "failed to set motor to acceleration rate %d!",acceleration_rate);
+    }else{
+      RCLCPP_INFO(this->get_logger(),"MD25 Motor acceleration rate %d",acceleration_rate);
+    }
+
     if(!resetAll()){
       RCLCPP_ERROR(this->get_logger(), "failed to reset encoders!");
     }
@@ -159,22 +189,49 @@ public:
 
 
     //------------------------------------------
-    // ROS1 stop_motor_server_ = nh->advertiseService("stop_motors",&MD25MotorDriverROSWrapper::callbackStop, this);
-    // stop_motor_server_ = this->create_service<std_srvs::srv::Trigger>(
-    //     "stop_motors",
-    //     std::bind(&MD25MotorDriverROSWrapper::stopMotorCallback, this, std::placeholders::_1, std::placeholders::_2)); 
+    stop_motor_server_ = this->create_service<std_srvs::srv::Trigger>(
+        "stop_motors", std::bind(&MD25MotorDriverROSWrapper::stopMotorCallback, this, std::placeholders::_1, std::placeholders::_2)); 
 
-    // // // ROS1 reset_encoders_server_ = nh->advertiseService("reset_encoders",&MD25MotorDriverROSWrapper::callbackReset,this);
-    // // reset_encoders_server_ = this->create_service<std_srvs::srv::Trigger>(
-    // //     "reset_encoders",
-    // //     std::bind(&MD25MotorDriverROSWrapper::callbackReset, this, std::placeholders::_1, std::placeholders::_2)); 
+    reset_encoders_server_ = this->create_service<std_srvs::srv::Trigger>(
+        "reset_encoders",
+        std::bind(&MD25MotorDriverROSWrapper::callbackReset, this, std::placeholders::_1, std::placeholders::_2)); 
+
+    if (enable_twist_) {
+        motor_twist_subscriber_ = this->create_subscription<geometry_msgs::msg::Twist>(
+        "cmd_vel", 2, std::bind(&MD25MotorDriverROSWrapper::twistToMotors, this, std::placeholders::_1));
+        RCLCPP_INFO(this->get_logger(), "MD25 Motor cmd_vel Subscribe Enabled");
+    }
+
+    if (enable_odom_) {
+        odom_timer_ = this->create_wall_timer(
+            std::chrono::duration<double>(1.0 / publish_odom_frequency_),
+            std::bind(&MD25MotorDriverROSWrapper::publishOdom, this));
+        odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>("odom", 10);
+        RCLCPP_INFO(this->get_logger(), "MD25 Odom Publish Enabled");
+    }
+
+    if (enable_speed_) {
+        current_speed_timer_ = this->create_wall_timer(
+        std::chrono::duration<double>(1.0 / publish_current_speed_frequency_),
+        std::bind(&MD25MotorDriverROSWrapper::publishCurrentSpeed, this)
+        );
+
+        current_speed_publisher_ = this->create_publisher<std_msgs::msg::ByteMultiArray>("current_speed", 10);
+
+        RCLCPP_INFO(this->get_logger(), "MD25 Motor Speed Publish Enabled");
+    }
 
     // TODO   
+    if (enable_status_) {
+        motor_status_timer_ = this->create_wall_timer(
+            std::chrono::duration<double>(1.0 / publish_motor_status_frequency_),
+            std::bind(&MD25MotorDriverROSWrapper::publishMotorStatus, this)
+        );
 
-    // if(enable_twist_){
-    //   motor_twist_subscriber_ = nh->subscribe("cmd_vel",2,&MD25MotorDriverROSWrapper::twistToMotors, this);
-    //   RCLCPP_INFO(this->get_logger(),"MD25 Motor cmd_vel Subscribe Enabled");
-    // }
+        motor_status_publisher_ = this->create_publisher<std_msgs::msg::ByteMultiArray>("motor_status", 1);
+        RCLCPP_INFO(this->get_logger(), "MD25 Motor Status Publish Enabled");
+    }
+
     // TODO   
     // if(enable_pid_){
     //   pid_timer_ = nh->createTimer(ros::Duration(1.0/pid_frequency_), &MD25MotorDriverROSWrapper::UpdatePID,this);
@@ -182,36 +239,17 @@ public:
     // }
         // TODO   
 
-    // if(enable_speed_){
-    //   current_speed_timer_ = nh->createTimer(ros::Duration(1.0 / publish_current_speed_frequency_),&MD25MotorDriverROSWrapper::publishCurrentSpeed,this);
-    //   current_speed_publisher_ = nh->advertise<std_msgs::ByteMultiArray>("current_speed",10);
-    //   RCLCPP_INFO(this->get_logger(),"MD25 Motor Speed Publish Enabled");
-    // }
+  
 
-    // TODO   
-    // if(enable_status_){
-    //   motor_status_timer_ = nh->createTimer(ros::Duration(1.0 / publish_motor_status_frequency_),&MD25MotorDriverROSWrapper::publishMotorStatus,this);
-    //   motor_status_publisher_ = nh->advertise<std_msgs::ByteMultiArray>("motor_status",1);
-    //   RCLCPP_INFO(this->get_logger(),"MD25 Motor Status Publish Enabled");
-    // }
-    // // ROS1 
-    // // if(enable_odom_){
-    // //   odom_timer_ = nh->createTimer(ros::Duration(1.0 / publish_odom_frequency_),&MD25MotorDriverROSWrapper::publishOdom,this);
-    // //   odom_publisher_ = nh->advertise<nav_msgs::Odometry>("odom",10);
-    // //   RCLCPP_INFO(this->get_logger(),"MD25 Odom Publish Enabled");
-    // // }
-    // if (enable_odom_) {
-    //     odom_timer_ = this->create_wall_timer(
-    //         std::chrono::duration<double>(1.0 / publish_odom_frequency_),
-    //         std::bind(&MD25MotorDriverROSWrapper::publishOdom, this));
-    //     odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>("odom", 10);
-    //     RCLCPP_INFO(this->get_logger(), "MD25 Odom Publish Enabled");
-    // }
  
   }
 //---------------------------------------
 /* Set Incoming Parameters to Variables or Defaults */
 void setParams() {
+
+   if(!this->get_parameter("enable_speed",enable_speed_)){
+      enable_speed_ = false;
+    }
     if (!this->get_parameter("publish_current_speed_frequency", publish_current_speed_frequency_)) {
       publish_current_speed_frequency_ = 0.0;
       enable_speed_ = false;
@@ -223,7 +261,10 @@ void setParams() {
       }
     }
 
-// // ROS 1    if(!ros::param::get("~publish_motor_status_frequency",publish_motor_status_frequency_)){
+    if(!this->get_parameter("enable_status",enable_status_)){
+      enable_status_ = false;
+    }
+
     if (!this->get_parameter("publish_motor_status_frequency", publish_motor_status_frequency_)) {
       publish_motor_status_frequency_ = 0.0;
       enable_status_ = false;
@@ -234,19 +275,28 @@ void setParams() {
         enable_status_ = true;
       }
     }
-    // if(!ros::param::get("~enable_odom",enable_odom_)){
-    //   enable_odom_ = false;      
-    // }
-    // if(!ros::param::get("~publish_odom_frequency",publish_odom_frequency_)){
-    //   publish_odom_frequency_ = 10.0;
-    //   enable_odom_ = false;
-    // }else{
-    //   if(publish_odom_frequency_ == 0.0){
-    //     enable_odom_ = false;
-    //   }else{
-    //     enable_odom_ = true;
-    //   }
-    // }
+
+    if(!this->get_parameter("enable_twist",enable_twist_)){
+      enable_twist_ = enable_twist_default;
+    }
+
+    if(!this->get_parameter("enable_odom",enable_odom_)){
+      enable_odom_ = false;      
+    }
+    if(!this->get_parameter("acceleration_rate",acceleration_rate)){
+      acceleration_rate = 3;
+    }
+
+    if(!this->get_parameter("publish_odom_frequency",publish_odom_frequency_)){
+      publish_odom_frequency_ = 10.0;
+      enable_odom_ = false;
+    }else{
+      if(publish_odom_frequency_ == 0.0){
+        enable_odom_ = false;
+      }else{
+        enable_odom_ = true;
+      }
+    }
     // if(!ros::param::get("~motor_mode",motor_mode_)){
     //   motor_mode_ = 1;
     // }
@@ -280,53 +330,50 @@ void setParams() {
     // if(!ros::param::get("~debug_mode",debug_mode_)){
     //   debug_mode_ = false;
     // }
-    // if(!ros::param::get("~enable_twist",enable_twist_)){
-    //   enable_twist_ = false;
-    // }
     // if(!ros::param::get("~enable_pid",enable_pid_)){
     //   enable_pid_ = false;
     // }
-    // if(!ros::param::get("~acceleration_rate",acceleration_rate)){
-    //   acceleration_rate = 3;
-    // }
+
     RCLCPP_INFO(this->get_logger(),"MD25 Parameters Set");
 }
 
 //---------------------------------------
 /* Handle reset_encoders service message */
 // ROS1 bool callbackReset(std_srvs::Trigger::Request &req, std_srvs::TriggerResponse &res){
-void callbackReset(const std::shared_ptr<rmw_request_id_t> request_header,
-                     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-                     std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
-    motor->resetEncoders(this->get_logger ());
+void callbackReset(const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+                     std::shared_ptr<std_srvs::srv::Trigger::Response> response) 
+{
+    (void) request;
+    motor->resetEncoders(this->get_logger (), motor->getDeviceIdFront());
+    
     response->success = true;
     response->message = "Encoders Reset";    
 //    RCLCPP_INFO(this->get_logger(),"Encoders Reset");
  }
 //---------------------------------------
 /* Handle stop_motors service message */
-// ROS1 bool callbackStop(std_srvs::Trigger::Request &req, std_srvs::TriggerResponse &res){
-void stopMotorCallback(const std::shared_ptr<rmw_request_id_t> request_header,
-                     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-                     std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
+void stopMotorCallback(const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+                     std::shared_ptr<std_srvs::srv::Trigger::Response> response) 
+{
+     (void) request;
     stop();
     response->success = true;
     response->message = "Stopped Motors";
 }
 
 // // ROS 1
-// // //---------------------------------------
-// // /* optional publish current_speed (motor values) */ 
-// // void publishCurrentSpeed(const ros::TimerEvent &event){
-// //   int speed_l;
-// //   int speed_r;
-// //   std::tie(speed_l, speed_r) = motor->getMotorsSpeed();
-// //   std_msgs::ByteMultiArray barry;
-// //   barry.data.clear();
-// //   barry.data.push_back(speed_l);
-// //   barry.data.push_back(speed_r);
-// //   current_speed_publisher_.publish(barry);
-// //  }
+//---------------------------------------
+/* optional publish current_speed (motor values) */ 
+void publishCurrentSpeed(){
+  int speed_l;
+  int speed_r;
+  std_msgs::msg::ByteMultiArray barry;
+  std::tie(speed_l, speed_r) = motor->getMotorsSpeed(this->get_logger(), motor->getDeviceIdFront());
+  barry.data.clear();
+  barry.data.push_back(speed_l);
+  barry.data.push_back(speed_r);
+  current_speed_publisher_->publish(barry);
+ }
 
 // // ROS 1
 // // //---------------------------------------
@@ -343,22 +390,22 @@ void stopMotorCallback(const std::shared_ptr<rmw_request_id_t> request_header,
 // // //   motor_encoders_publisher_.publish(barry);
 // // //  }
 // // //---------------------------------------
-// // /* optional publish motor currents and battery voltage */
-// // void publishMotorStatus(const ros::TimerEvent &event){
-// //   int curr_l;
-// //   int curr_r;
-// //   std::tie(curr_l, curr_r) = motor->readEncoders();
-// //   std_msgs::ByteMultiArray barry;
-// //   barry.data.clear();
-// //   barry.data.push_back(curr_l);
-// //   barry.data.push_back(curr_r);
-// //   motor_status_publisher_.publish(barry);
-// //  }
+/* optional publish motor currents and battery voltage */
+void publishMotorStatus(){
+  int curr_l;
+  int curr_r;
+  std::tie(curr_l, curr_r) = motor->readEncoders(this->get_logger(), motor->getDeviceIdFront());
+  std_msgs::msg::ByteMultiArray barry;
+  barry.data.clear();
+  barry.data.push_back(curr_l);
+  barry.data.push_back(curr_r);
+  motor_status_publisher_->publish(barry);
+ }
 
 //---------------------------------------
 /* Direct Stop Both Motors*/
 void stop(){
-    motor->stopMotors(this->get_logger ());
+    motor->stopMotors(this->get_logger (), motor->getDeviceIdFront());
  }
 
 //---------------------------------------
@@ -406,7 +453,7 @@ void publishOdom() {
 
         int ticks_l;
         int ticks_r;
-        std::tie(ticks_l, ticks_r) = motor->readEncoders(this->get_logger ());
+        std::tie(ticks_l, ticks_r) = motor->readEncoders(this->get_logger (), motor->getDeviceIdFront());
 
         leftPID.Encoder = ticks_l;
         rightPID.Encoder = ticks_r;
@@ -532,7 +579,7 @@ void twistToMotors(const geometry_msgs::msg::Twist &msg){
   double spd_left,spd_right;
   if(x == 0.0 && th == 0.0){
     moving = false;
-    motor->stopMotors(this->get_logger ());
+    motor->stopMotors(this->get_logger (), motor->getDeviceIdFront());
     return;
   }
   moving = true;
@@ -548,28 +595,28 @@ void twistToMotors(const geometry_msgs::msg::Twist &msg){
     }
   }
 }
-//------------------------------------------------------------------
-//https://github.com/KristofRobot/ros_arduino_bridge/commit/cf9d223969d1be2d6d954f8cbaa67a331c8a2793
-/* PID routine to compute the next motor commands */
-void doPID(SetPointInfo * p) {
-  long Perror;
-  long output;
-  int input;
-  input = p->Encoder - p->PrevEnc;
-  Perror = p->TargetTicksPerFrame - input;
-  // Derivative error is the delta Perror
-  output = (Kp * Perror - Kd * (input - p->PrevInput) + p->ITerm)/Ko;
-  p->PrevEnc = p->Encoder; 
-  //output += p->output; // cumulative don't work
-  if (output >= max_speed_)
-    output = max_speed_;
-  else if (output <= -max_speed_)
-    output = -max_speed_;
-  else
-    p->ITerm += Ki * Perror;
-  p->output = output;
-  p->PrevInput = input;
-}
+// //------------------------------------------------------------------
+// //https://github.com/KristofRobot/ros_arduino_bridge/commit/cf9d223969d1be2d6d954f8cbaa67a331c8a2793
+// /* PID routine to compute the next motor commands */
+// void doPID(SetPointInfo * p) {
+//   long Perror;
+//   long output;
+//   int input;
+//   input = p->Encoder - p->PrevEnc;
+//   Perror = p->TargetTicksPerFrame - input;
+//   // Derivative error is the delta Perror
+//   output = (Kp * Perror - Kd * (input - p->PrevInput) + p->ITerm)/Ko;
+//   p->PrevEnc = p->Encoder; 
+//   //output += p->output; // cumulative don't work
+//   if (output >= max_speed_)
+//     output = max_speed_;
+//   else if (output <= -max_speed_)
+//     output = -max_speed_;
+//   else
+//     p->ITerm += Ki * Perror;
+//   p->output = output;
+//   p->PrevInput = input;
+// }
 //---------------------------------------
 /* Clear PID Values and variables */
 bool clearPID(){
@@ -596,7 +643,7 @@ bool clearPID(){
 }
 //---------------------------------------
 bool resetAll(){
-  bool resetted  = motor->resetEncoders(this->get_logger ());
+  bool resetted  = motor->resetEncoders(this->get_logger (), motor->getDeviceIdFront());
   RCLCPP_INFO(this->get_logger(),"MD25 Reset ALL");
   // int ticks_l;
   // int ticks_r;
@@ -656,12 +703,13 @@ long Millis(){
 /* Main Function */
 int main(int argc,char **argv){
 
-rclcpp::init(argc, argv);
-  auto node = std::make_shared<MD25MotorDriverROSWrapper>();
+    rclcpp::init(argc, argv);
+    rclcpp::NodeOptions options;   
+    auto node = std::make_shared<MD25MotorDriverROSWrapper>(options);
 
     rclcpp::executors::MultiThreadedExecutor executor;
     executor.add_node(node);
-    executor.spin();
+    executor.spin();  
     node.get()->shutdown();
     rclcpp::shutdown();
 

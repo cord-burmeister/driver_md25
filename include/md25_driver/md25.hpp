@@ -44,35 +44,42 @@ public:
 
   //-------------------- 
   bool setup(const rclcpp::Logger logger);
-  int getSoftwareVersion(const rclcpp::Logger logger);
-  int getBatteryVolts(const rclcpp::Logger logger);
-  int getAccelerationRate(const rclcpp::Logger logger);
-  int getMode(const rclcpp::Logger logger);
-  std::pair<int,int> getMotorsSpeed(const rclcpp::Logger logger);
-  std::pair<int,int> getMotorsCurrent(const rclcpp::Logger logger);
-  bool enableSpeedRegulation(const rclcpp::Logger logger);
-  bool disableSpeedRegulation(const rclcpp::Logger logger);
-  bool enableTimeout(const rclcpp::Logger logger);
-  bool disableTimeout(const rclcpp::Logger logger);
-  bool setMotorsSpeed(const rclcpp::Logger logger, int speed1,int speed2);
-  bool stopMotors(const rclcpp::Logger logger);
-  bool haltMotors(const rclcpp::Logger logger);
-  bool setMode(const rclcpp::Logger logger, int mode);
-  bool setAccelerationRate(const rclcpp::Logger logger, int rate);
-  bool resetEncoders(const rclcpp::Logger logger);
-  std::pair<int, int> readEncoders(const rclcpp::Logger logger);
-  bool writeSpeed(const rclcpp::Logger logger, int left,int right);
+  int getSoftwareVersion(const rclcpp::Logger logger, int deviceId);
+  int getBatteryVolts(const rclcpp::Logger logger, int deviceId);
+  int getAccelerationRate(const rclcpp::Logger logger, int deviceId);
+  int getMode(const rclcpp::Logger logger, int deviceId);
+  std::pair<int,int> getMotorsSpeed(const rclcpp::Logger logger, int deviceId);
+  std::pair<int,int> getMotorsCurrent(const rclcpp::Logger logger, int deviceId);
+  bool enableSpeedRegulation(const rclcpp::Logger logger, int deviceId);
+  bool disableSpeedRegulation(const rclcpp::Logger logger, int deviceId);
+  bool enableTimeout(const rclcpp::Logger logger, int deviceId);
+  bool disableTimeout(const rclcpp::Logger logger, int deviceId);
+  bool setMotorsSpeed(const rclcpp::Logger logger, int deviceId, int speed1,int speed2);
+  bool stopMotors(const rclcpp::Logger logger, int deviceId);
+  bool haltMotors(const rclcpp::Logger logger, int deviceId);
+  bool setMode(const rclcpp::Logger logger, int deviceId, int mode);
+  bool setAccelerationRate(const rclcpp::Logger logger, int deviceId, int rate);
+  bool resetEncoders(const rclcpp::Logger logger, int deviceId);
+  std::pair<int, int> readEncoders(const rclcpp::Logger logger, int deviceId);
+  bool writeSpeed(const rclcpp::Logger logger, int deviceId, int left,int right);
  
+  int getDeviceIdFront ();
+  int getDeviceIdRear ();
   //-------------
 private:
   std::mutex lock;
-  int readByte(const rclcpp::Logger logger, int reg);
-  std::pair<int, int> readTwoBytes(const rclcpp::Logger logger, int reg);
-  bool sendCommand(const rclcpp::Logger logger, int command,int reg);
-  int readEncoder(const rclcpp::Logger logger, int LR);
+  int readByte(const rclcpp::Logger logger, int deviceId, int reg);
+  std::pair<int, int> readTwoBytes(const rclcpp::Logger logger, int deviceId, int reg);
+  bool sendCommand(const rclcpp::Logger logger, int deviceId, int command,int reg);
+  bool selectDevice(const rclcpp::Logger logger, int deviceId);
+  int readEncoder(const rclcpp::Logger logger, int deviceId, int LR);
   bool lastReadEncoders = false;
   int m_fd = -1;
-  int address = 0x58;
+  //int address = 0x58;
+  int deviceIdFront = 0x58;
+  int deviceIdRear = 0x5A;
+  int lastDeviceId = -1;
+  bool has2Driver = true;
 
   int m_software_version = 0;
   long m_encoder_1_ticks = 0;
