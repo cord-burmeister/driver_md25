@@ -65,6 +65,12 @@ public:
  
   int getDeviceIdFront ();
   int getDeviceIdRear ();
+
+  int getFrontLeftEncoderId ();
+  int getFrontRightEncoderId ();
+  int getRearLeftEncoderId ();
+  int getRearRightEncoderId ();
+
   //-------------
 private:
   std::mutex lock;
@@ -81,10 +87,12 @@ private:
   int lastDeviceId = -1;
   bool has2Driver = true;
 
-  int m_software_version = 0;
+  int m_software_version_front = 0;
+  int m_software_version_rear = 0;
   long m_encoder_1_ticks = 0;
   long m_encoder_2_ticks = 0;
   const char * m_i2c_file      = nullptr;
+  rclcpp::Time last_time;
   
   static const int SPD1		            = 0x00;  // speed to first motor
   static const int SPD2		            = 0x01;  // speed to second motor
@@ -103,6 +111,8 @@ private:
   static const int DISABLE_TIMEOUT    = 0x32; //  
   static const int ENABLE_TIMEOUT     = 0x33; //
   static const int STOP_SPEED	      	= 0x00;  // 0 velocity  0x80 = 128
-};
+
+
+  };
 
 #endif

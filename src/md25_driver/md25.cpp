@@ -27,13 +27,27 @@ bool md25_driver::setup(const rclcpp::Logger logger){
     RCLCPP_ERROR(logger, "Could not read from i2c slave");
     return false;
   }
+  RCLCPP_INFO(logger, "MD25 Motors front initialized with software version '%u'", m_buff[0]);
+  m_software_version_front = static_cast<int>(m_buff[0]);
 
-
-
-  RCLCPP_INFO(logger, "MD25 Motors initialized with software version '%u'", m_buff[0]);
-  m_software_version = static_cast<int>(m_buff[0]);
+  if (has2Driver)
+  {
+    if (ioctl(m_fd, I2C_SLAVE, deviceIdRear) < 0) {
+      RCLCPP_ERROR(logger, "Could not speak to I2C bus!");
+      return false;
+    } else if (write(m_fd, m_buff, 1) != 1) {
+      RCLCPP_ERROR(logger, "Could not write to i2c slave");
+      return false;
+    } else if (read(m_fd, m_buff, 1) != 1) {
+      RCLCPP_ERROR(logger, "Could not read from i2c slave");
+      return false;
+    }
+    RCLCPP_INFO(logger, "MD25 Motors rear initialized with software version '%u'", m_buff[0]);
+    m_software_version_rear = static_cast<int>(m_buff[0]);
+  }
   return true;
 }
+
 //---------------------------------------------
 int md25_driver::getSoftwareVersion(const rclcpp::Logger logger, int deviceId)
 {
@@ -314,6 +328,41 @@ bool md25_driver::selectDevice(const rclcpp::Logger logger, int deviceId){
   return true;
 }
 
+
+/*
+                      FRONT                        
+        +---------------------------------+        
+        |           +---------+           |        
+        |           |         |           |        
+      +---------+   | 0x58    |   +---------+      
+      | | 2     |   |         |   |     1 | |      
+      | |       |   +--+---+--+   |       | |      
+      +---------+      +---+      +---------+      
+        |                                 |        
+        |                                 |        
+        |                                 |        
+        |                                 |        
+LEFT    |                                 |  RIGHT 
+        |                                 |        
+        |                                 |        
+        |                                 |        
+        |                                 |        
+        |                                 |        
+      +--------+      +---+       +---------+      
+      | | 1    |   +--+---+--+    |     2 | |      
+      | |      |   |         |    |       | |      
+      +--------+   |  0x5A   |    +---------+      
+        |          |         |            |        
+        |          +---------+            |        
+        |                                 |        
+        |                                 |        
+        +---------------------------------+        
+                                                   
+                       REAR                        
+                                                   
+*/
+
+
 int md25_driver::getDeviceIdFront ()
 {
   return deviceIdFront;
@@ -323,4 +372,21 @@ int md25_driver::getDeviceIdRear ()
 {
   return deviceIdRear;
 }
-  
+
+  int md25_driver::getFrontLeftEncoderId ()
+  {
+    return 2;
+  }
+  int md25_driver::getFrontRightEncoderId ()
+  {
+    return 1;
+  }
+  int md25_driver::getRearLeftEncoderId ()
+  {
+    return 1;
+  }
+  int md25_driver::getRearRightEncoderId ()
+  {
+    return 2;
+  }
+
