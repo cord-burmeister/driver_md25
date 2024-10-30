@@ -71,7 +71,6 @@ private:
   bool has4Motor = true;
   
   int max_speed_ = 100;
-  bool moving = false;
 
   double width_robot  = 0.33;    // This is the distance from one wheel to the other in meter
   // // double distance_front_wheel  = 0.36;    // This is the distance from center of robot to the front wheel in meter
@@ -528,6 +527,7 @@ bool resetAll(){
 
 }; // end class
 //---------------------------------------
+
 /* Main Function */
 int main(int argc,char **argv){
 
@@ -541,12 +541,6 @@ int main(int argc,char **argv){
     node.get()->shutdown();
     rclcpp::shutdown();
 
-  // // ROS 1
-  // // ros::AsyncSpinner spinner(4);
-  // // spinner.start();
-  // // MD25MotorDriverROSWrapper motor_wrapper(&nh);
-  RCLCPP_INFO(node->get_logger(),"MD25 Motor Driver v0.0.1 Started");
-  // // ros::waitForShutdown();
-  // // motor_wrapper.shutdown();
-  return 0;
+    RCLCPP_INFO(node->get_logger(),"Motor Driver v0.0.1 Started");
+    return 0;
  }
