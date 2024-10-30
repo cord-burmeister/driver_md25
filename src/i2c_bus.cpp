@@ -285,6 +285,3 @@ bool I2cBus::selectDevice(const rclcpp::Logger logger, int deviceId){
   }
   return true;
 }
-
-
-

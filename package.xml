@@ -12,9 +12,10 @@
   <!-- It is also good practice to add a dependency to ros2launch to the package.xml file of your package: -->
   <exec_depend>ros2launch</exec_depend>
   <build_depend>tf</build_depend>
-
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>gtest</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

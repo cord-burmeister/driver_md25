@@ -36,7 +36,7 @@ find_package(nav_msgs REQUIRED)
 find_package(map_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(nav2_costmap_2d REQUIRED)
-
+find_package(GTest REQUIRED)
 
 set(DEPENDENCIES
   rclcpp
@@ -88,6 +88,16 @@ ament_target_dependencies(marvin_bus ${DEPENDENCIES})
 
 install(TARGETS marvin_bus
   DESTINATION lib/${PROJECT_NAME})
+
+add_executable(test_md25_driver test/test_md25_driver.cpp)
+target_link_libraries(test_md25_driver ${GTEST_LIBRARIES} pthread)
+ament_add_gtest(test_md25_driver test/test_md25_driver.cpp)
+ament_target_dependencies(test_md25_driver ${DEPENDENCIES})
+
+add_executable(test_i2c_bus test/test_i2c_bus.cpp)
+target_link_libraries(test_i2c_bus ${GTEST_LIBRARIES} pthread)
+ament_add_gtest(test_i2c_bus test/test_i2c_bus.cpp)
+ament_target_dependencies(test_i2c_bus ${DEPENDENCIES})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
 

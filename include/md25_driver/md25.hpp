@@ -1,17 +1,3 @@
-// Copyright 2017 Hunter L. Allen
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #ifndef __MD25_HPP__
 #define __MD25_HPP__
 
@@ -37,224 +23,268 @@
 
 #define BUF_LEN 10
 
+/**
+ * @brief The md25_driver class is responsible for controlling the MD25 motor driver.
+ * It inherits from the MotorController class and provides methods to setup, reset encoders,
+ * get motor speeds, read encoders, and stop motors.
+ */
 class md25_driver : public MotorController
 {
 public:
   md25_driver();
   ~md25_driver();
 
-   bool setup(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus) override  { 
-      uint8_t m_software_version_front = 0;
-      uint8_t m_software_version_rear = 0;
-      bool success = true;
-      bool result = true;
+  /**
+   * @brief Sets up the MD25 motor driver by initializing the front and rear devices,
+   * setting the motor mode, and setting the acceleration rate.
+   * @param logger The logger to use for logging messages.
+   * @param i2c_bus The I2C bus to use for communication with the MD25 motor driver.
+   * @return True if the setup was successful, false otherwise.
+   */
+  bool setup(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus) override;
 
-      m_software_version_front = i2c_bus->readByte (logger, this->getDeviceIdFront(), SW_VER, success);
-      if (!success)
-      {
-        result = false;
-        RCLCPP_ERROR(logger, "MD25 Motors initialized front device failed");
-      }
-      m_software_version_rear = i2c_bus->readByte (logger, this->getDeviceIdRear(), SW_VER, success);
-      if (!success)
-      {
-        result = false;
-        RCLCPP_ERROR(logger, "MD25 Motors initialized rear device failed");
-      }
-      RCLCPP_INFO(logger, "MD25 Motors initialized with software version '%u' and '%u'", m_software_version_front, m_software_version_rear);
+  /**
+   * @brief Resets the encoders of the MD25 motor driver.
+   * @param logger The logger to use for logging messages.
+   * @param i2c_bus The I2C bus to use for communication with the MD25 motor driver.
+   * @return True if the encoders were successfully reset, false otherwise.
+   */
+  bool resetEncoders(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus) override;
 
-      success = i2c_bus->sendCommand (logger, getDeviceIdFront(), motor_mode_ ,MODE);
-      if (!success)
-      {
-        result = false;
-        RCLCPP_ERROR(logger, "MD25 Motors setting mode front device failed");
-      }
-      success = i2c_bus->sendCommand (logger, getDeviceIdRear(), motor_mode_ ,MODE);
-      if (!success)
-      {
-        result = false;
-        RCLCPP_ERROR(logger, "MD25 Motors setting mode rear device failed");
-      }
-      success = i2c_bus->sendCommand (logger, getDeviceIdFront(), acceleration_rate ,ACC_RATE);
-      if (!success)
-      {
-        result = false;
-        RCLCPP_ERROR(logger, "MD25 Motors setting acceleration mode front device failed");
-      }
-      success = i2c_bus->sendCommand (logger, getDeviceIdRear(), acceleration_rate,ACC_RATE);
-      if (!success)
-      {
-        result = false;
-        RCLCPP_ERROR(logger, "MD25 Motors setting acceleration mode rear device failed");
-      }
-      return result;
-  }
- 
+  /**
+   * @brief Gets the speeds of the motors.
+   * @param logger The logger to use for logging messages.
+   * @param i2c_bus The I2C bus to use for communication with the MD25 motor driver.
+   * @param success A reference to a boolean that will be set to true if the operation was successful, false otherwise.
+   * @return A vector containing the speeds of the motors.
+   */
+  std::vector<int> getMotorsSpeed(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, bool & success) override;
 
-  bool resetEncoders(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus) override {
-    bool success = true;
-    bool result = i2c_bus->sendCommand(logger, getDeviceIdFront(), ENCODER_RESET,CMD);
-    if (!result) {
-      RCLCPP_ERROR(logger, "resetEncoders: Could not reset front encoders");
-      success = false;
-    }
-    result = i2c_bus->sendCommand(logger, getDeviceIdRear(), ENCODER_RESET,CMD);
-    if (!result) {
-      RCLCPP_ERROR(logger, "resetEncoders: Could not reset rear encoders");
-      success = false;
-    }
-    m_encoder_1_ticks = 0;
-    m_encoder_2_ticks = 0;
-    m_encoder_3_ticks = 0;
-    m_encoder_4_ticks = 0;
+  /**
+   * @brief Reads the encoder values of the motors.
+   * @param logger The logger to use for logging messages.
+   * @param i2c_bus The I2C bus to use for communication with the MD25 motor driver.
+   * @param success A reference to a boolean that will be set to true if the operation was successful, false otherwise.
+   * @return A vector containing the encoder values of the motors.
+   */
+  std::vector<int> readEncoders(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, bool & success) override;
 
-    return success;
-  }
+  /**
+   * @brief Stops the motors.
+   * @param logger The logger to use for logging messages.
+   * @param i2c_bus The I2C bus to use for communication with the MD25 motor driver.
+   * @return True if the motors were successfully stopped, false otherwise.
+   */
+  virtual bool stopMotors(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus);
 
-  std::vector<int> getMotorsSpeed(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, bool & success) override {
-    (void) logger; // Swallow unused warning
-    (void) i2c_bus; // Swallow unused warning
-    int speed;
-    std::vector<int> speeds;
-    speed = i2c_bus->readByte (logger, this->getDeviceIdFront(), SPD1, success);
-    if (!success)
-    {
-      RCLCPP_ERROR(logger, "MD25 Motors initialized rear device failed");
-      return speeds;
-    }
-    speeds.push_back (speed);
-    speed = i2c_bus->readByte (logger, this->getDeviceIdFront(), SPD2, success);
-    if (!success)
-    {
-      RCLCPP_ERROR(logger, "MD25 Motors initialized rear device failed");
-      return speeds;
-    }
-    speeds.push_back (speed);
-    speed = i2c_bus->readByte (logger, this->getDeviceIdRear(), SPD2, success);
-    if (!success)
-    {
-      RCLCPP_ERROR(logger, "MD25 Motors initialized rear device failed");
-      return speeds;
-    }
-    speeds.push_back (speed);
-    speed = i2c_bus->readByte (logger, this->getDeviceIdRear(), SPD1, success);
-    if (!success)
-    {
-      RCLCPP_ERROR(logger, "MD25 Motors initialized rear device failed");
-      return speeds;
-    }
-    speeds.push_back (speed);
-    return speeds;
-  }
-
-  std::vector<int> readEncoders(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, bool & success) override {
-    std::vector<int> encoderValues;
-    int ticks_l;
-    int ticks_r;
-    std::tie(ticks_l, ticks_r) = i2c_bus->readTwoIntFrom8Bytes (logger, this->getDeviceIdFront(), ENC1, success);
-    encoderValues.push_back (ticks_l);
-    encoderValues.push_back (ticks_r);
-    std::tie(ticks_l, ticks_r) = i2c_bus->readTwoIntFrom8Bytes (logger, this->getDeviceIdRear(), ENC1, success);
-    encoderValues.push_back (ticks_l);
-    encoderValues.push_back (ticks_r);
-    return encoderValues;
-  }
-
-  virtual bool stopMotors(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus){
-   bool success = true;
-    bool result = i2c_bus->sendCommand(logger, getDeviceIdFront(), ENCODER_RESET,CMD);
-    if (!result) {
-      RCLCPP_ERROR(logger, "resetEncoders: Could not reset front encoders");
-      success = false;
-    }
-    result = i2c_bus->sendCommand(logger, getDeviceIdRear(), ENCODER_RESET,CMD);
-    if (!result) {
-      RCLCPP_ERROR(logger, "resetEncoders: Could not reset rear encoders");
-      success = false;
-    }
-    return success;
-  }
-  //-------------------- 
+  /**
+   * @brief Gets the software version of the MD25 motor driver.
+   * @param logger The logger to use for logging messages.
+   * @param deviceId The ID of the device to get the software version from.
+   * @return The software version of the MD25 motor driver.
+   */
   int getSoftwareVersion(const rclcpp::Logger logger, int deviceId);
+
+  /**
+   * @brief Gets the battery voltage of the MD25 motor driver.
+   * @param logger The logger to use for logging messages.
+   * @param deviceId The ID of the device to get the battery voltage from.
+   * @return The battery voltage of the MD25 motor driver.
+   */
   int getBatteryVolts(const rclcpp::Logger logger, int deviceId);
+
+  /**
+   * @brief Gets the acceleration rate of the MD25 motor driver.
+   * @param logger The logger to use for logging messages.
+   * @param deviceId The ID of the device to get the acceleration rate from.
+   * @return The acceleration rate of the MD25 motor driver.
+   */
   int getAccelerationRate(const rclcpp::Logger logger, int deviceId);
+
+  /**
+   * @brief Gets the mode of the MD25 motor driver.
+   * @param logger The logger to use for logging messages.
+   * @param deviceId The ID of the device to get the mode from.
+   * @return The mode of the MD25 motor driver.
+   */
   int getMode(const rclcpp::Logger logger, int deviceId);
+
+  /**
+   * @brief Gets the speeds of the motors.
+   * @param logger The logger to use for logging messages.
+   * @param deviceId The ID of the device to get the motor speeds from.
+   * @return A pair containing the speeds of the motors.
+   */
   std::pair<int,int> getMotorsSpeed(const rclcpp::Logger logger, int deviceId);
+
+  /**
+   * @brief Gets the currents of the motors.
+   * @param logger The logger to use for logging messages.
+   * @param deviceId The ID of the device to get the motor currents from.
+   * @return A pair containing the currents of the motors.
+   */
   std::pair<int,int> getMotorsCurrent(const rclcpp::Logger logger, int deviceId);
+
+  /**
+   * @brief Enables speed regulation for the MD25 motor driver.
+   * @param logger The logger to use for logging messages.
+   * @param deviceId The ID of the device to enable speed regulation for.
+   * @return True if speed regulation was successfully enabled, false otherwise.
+   */
   bool enableSpeedRegulation(const rclcpp::Logger logger, int deviceId);
+
+  /**
+   * @brief Disables speed regulation for the MD25 motor driver.
+   * @param logger The logger to use for logging messages.
+   * @param deviceId The ID of the device to disable speed regulation for.
+   * @return True if speed regulation was successfully disabled, false otherwise.
+   */
   bool disableSpeedRegulation(const rclcpp::Logger logger, int deviceId);
+
+  /**
+   * @brief Enables the timeout feature for the MD25 motor driver.
+   * @param logger The logger to use for logging messages.
+   * @param deviceId The ID of the device to enable the timeout feature for.
+   * @return True if the timeout feature was successfully enabled, false otherwise.
+   */
   bool enableTimeout(const rclcpp::Logger logger, int deviceId);
+
+  /**
+   * @brief Disables the timeout feature for the MD25 motor driver.
+   * @param logger The logger to use for logging messages.
+   * @param deviceId The ID of the device to disable the timeout feature for.
+   * @return True if the timeout feature was successfully disabled, false otherwise.
+   */
   bool disableTimeout(const rclcpp::Logger logger, int deviceId);
+
+  /**
+   * @brief Sets the speeds of the motors.
+   * @param logger The logger to use for logging messages.
+   * @param deviceId The ID of the device to set the motor speeds for.
+   * @param speed1 The speed of the first motor.
+   * @param speed2 The speed of the second motor.
+   * @return True if the motor speeds were successfully set, false otherwise.
+   */
   bool setMotorsSpeed(const rclcpp::Logger logger, int deviceId, int speed1,int speed2);
+
+  /**
+   * @brief Stops the motors.
+   * @param logger The logger to use for logging messages.
+   * @param deviceId The ID of the device to stop the motors for.
+   * @return True if the motors were successfully stopped, false otherwise.
+   */
   bool stopMotors(const rclcpp::Logger logger, int deviceId);
+
+  /**
+   * @brief Halts the motors.
+   * @param logger The logger to use for logging messages.
+   * @param deviceId The ID of the device to halt the motors for.
+   * @return True if the motors were successfully halted, false otherwise.
+   */
   bool haltMotors(const rclcpp::Logger logger, int deviceId);
+
+  /**
+   * @brief Sets the mode of the MD25 motor driver.
+   * @param logger The logger to use for logging messages.
+   * @param deviceId The ID of the device to set the mode for.
+   * @param mode The mode to set.
+   * @return True if the mode was successfully set, false otherwise.
+   */
   bool setMode(const rclcpp::Logger logger, int deviceId, int mode);
+
+  /**
+   * @brief Sets the acceleration rate of the MD25 motor driver.
+   * @param logger The logger to use for logging messages.
+   * @param deviceId The ID of the device to set the acceleration rate for.
+   * @param rate The acceleration rate to set.
+   * @return True if the acceleration rate was successfully set, false otherwise.
+   */
   bool setAccelerationRate(const rclcpp::Logger logger, int deviceId, int rate);
+
+  /**
+   * @brief Reads the encoder values of the motors.
+   * @param logger The logger to use for logging messages.
+   * @param deviceId The ID of the device to read the encoder values from.
+   * @return A pair containing the encoder values of the motors.
+   */
   std::pair<int, int> readEncoders(const rclcpp::Logger logger, int deviceId);
+
+  /**
+   * @brief Writes the speeds of the motors.
+   * @param logger The logger to use for logging messages.
+   * @param deviceId The ID of the device to write the motor speeds for.
+   * @param left The speed of the left motor.
+   * @param right The speed of the right motor.
+   * @return True if the motor speeds were successfully written, false otherwise.
+   */
   bool writeSpeed(const rclcpp::Logger logger, int deviceId, int left,int right);
- 
+
+  /**
+   * @brief Gets the ID of the front device.
+   * @return The ID of the front device.
+   */
   int getDeviceIdFront ();
+
+  /**
+   * @brief Gets the ID of the rear device.
+   * @return The ID of the rear device.
+   */
   int getDeviceIdRear ();
 
+  /**
+   * @brief Gets the ID of the front left encoder.
+   * @return The ID of the front left encoder.
+   */
   int getFrontLeftEncoderId ();
+
+  /**
+   * @brief Gets the ID of the front right encoder.
+   * @return The ID of the front right encoder.
+   */
   int getFrontRightEncoderId ();
+
+  /**
+   * @brief Gets the ID of the rear left encoder.
+   * @return The ID of the rear left encoder.
+   */
   int getRearLeftEncoderId ();
+
+  /**
+   * @brief Gets the ID of the rear right encoder.
+   * @return The ID of the rear right encoder.
+   */
   int getRearRightEncoderId ();
 
-  //-------------
 private:
-
-  //   Mode Register
-  // The mode register selects which mode of operation and I2C data input type the user requires. The options being:
-  // 0,    (default setting) If a value of 0 is written to the mode register then the meaning of the speed registers is literal speeds in the range of 0 (full reverse)  128 (stop)   255 (full forward).
-  // 1,    Mode 1 is similar to mode 0, except that the speed registers are interpreted as signed values. The meaning of the speed registers is literal speeds in the range of -128 (full reverse)   0 (Stop)   127 (full forward).
-  // 2,    Writing a value of  2 to the mode register will make Speed1 control both motors speed, and Speed2 becomes the turn value. 
-  // Data is in the range of 0 (full reverse)  128 (stop)  255 (full  forward).
-  // 3,    Mode 3 is similar to mode 2, except that the speed registers are interpreted as signed values. 
-  // Data is in the range of -128  (full reverse)  0 (stop)   127 (full forward)
   int motor_mode_ = 1;
-
-  // Acceleration Rate 
-  // If you require a controlled acceleration period for the attached motors to reach there ultimate speed, the MD25 has a register to provide this. 
-  // It works by using a value into the acceleration register and incrementing the power by that value. Changing between the current speed of the motors 
-  // and the new speed (from speed 1 and 2 registers). So if the motors were traveling at full speed in the forward direction (255) and were instructed 
-  // to move at full speed in reverse (0), there would be 255 steps with an acceleration register value of 1, but 128 for a value of 2. 
-  // The default acceleration value is 5, meaning the speed is changed from full forward to full reverse in 1.25 seconds. The register will accept values 
-  // of 1 up to 10 which equates to a period of only 0.65 seconds to travel from full speed in one direction to full speed in the opposite direction.
-  // See https://www.robot-electronics.co.uk/htm/md25i2c.htm
   int acceleration_rate = 3;
-
   int deviceIdFront = 0x58;
   int deviceIdRear = 0x5A;
-
   int m_software_version_front = 0;
   int m_software_version_rear = 0;
   long m_encoder_1_ticks = 0;
   long m_encoder_2_ticks = 0;
   long m_encoder_3_ticks = 0;
   long m_encoder_4_ticks = 0;
-
   rclcpp::Time last_time;
-  
-  static const int SPD1		            = 0x00;  // speed to first motor
-  static const int SPD2		            = 0x01;  // speed to second motor
-  static const int ENC1	              = 0x02;  // motor encoder 1 (first byte)
-  static const int ENC2	              = 0x06;  // motor encoder 2 (first byte)
-  static const int VOLT		            = 0x0A;  // battery volts
-  static const int I1	                = 0x0B;  // motor 1 current
-  static const int I2	                = 0x0C;  // motor 2 current
-  static const int SW_VER             = 0x0D;  // software version
-  static const int ACC_RATE	          = 0x0E;  // acceleration rate
-  static const int MODE		            = 0x0F;  // mode of operation
-  static const int CMD		            = 0x10;  // command register
-  static const int ENCODER_RESET      = 0x20; // 
-  static const int DISABLE_SPEED_REG  = 0x30; //
-  static const int ENABLE_SPEED_REG   = 0x31; //
-  static const int DISABLE_TIMEOUT    = 0x32; //  
-  static const int ENABLE_TIMEOUT     = 0x33; //
-  static const int STOP_SPEED	      	= 0x00;  // 0 velocity  0x80 = 128
 
-
-  };
+  static const int SPD1 = 0x00;
+  static const int SPD2 = 0x01;
+  static const int ENC1 = 0x02;
+  static const int ENC2 = 0x06;
+  static const int VOLT = 0x0A;
+  static const int I1 = 0x0B;
+  static const int I2 = 0x0C;
+  static const int SW_VER = 0x0D;
+  static const int ACC_RATE = 0x0E;
+  static const int MODE = 0x0F;
+  static const int CMD = 0x10;
+  static const int ENCODER_RESET = 0x20;
+  static const int DISABLE_SPEED_REG = 0x30;
+  static const int ENABLE_SPEED_REG = 0x31;
+  static const int DISABLE_TIMEOUT = 0x32;
+  static const int ENABLE_TIMEOUT = 0x33;
+  static const int STOP_SPEED = 0x00;
+};
 
 #endif
