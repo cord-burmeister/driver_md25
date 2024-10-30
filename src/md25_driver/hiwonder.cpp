@@ -1,8 +1,8 @@
 #include <i2c_bus.hpp>
-#include <md25_driver/md25.hpp>
+#include <md25_driver/hiwonder.hpp>
 
-md25_driver::md25_driver( ) {}
-md25_driver::~md25_driver() {}
+hiwonder_driver::hiwonder_driver( ) {}
+hiwonder_driver::~hiwonder_driver() {}
 
 // //---------------------------------------------
 // int md25_driver::getSoftwareVersion(const rclcpp::Logger logger, int deviceId)

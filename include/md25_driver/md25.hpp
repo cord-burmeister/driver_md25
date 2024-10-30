@@ -32,18 +32,149 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <i2c_bus.hpp>
+#include <md25_driver/motor_controller.hpp>
 
 #define BUF_LEN 10
 
-class md25_driver 
+class md25_driver : public MotorController
 {
 public:
-  //md25_driver(const rclcpp::Logger logger, const char * _i2c_file = "/dev/i2c-1");
-  md25_driver(const char * _i2c_file = "/dev/i2c-1");
+  md25_driver();
   ~md25_driver();
 
+   bool setup(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus) override  { 
+      uint8_t m_software_version_front = 0;
+      uint8_t m_software_version_rear = 0;
+      bool success = true;
+      bool result = true;
+
+      m_software_version_front = i2c_bus->readByte (logger, this->getDeviceIdFront(), SW_VER, success);
+      if (!success)
+      {
+        result = false;
+        RCLCPP_ERROR(logger, "MD25 Motors initialized front device failed");
+      }
+      m_software_version_rear = i2c_bus->readByte (logger, this->getDeviceIdRear(), SW_VER, success);
+      if (!success)
+      {
+        result = false;
+        RCLCPP_ERROR(logger, "MD25 Motors initialized rear device failed");
+      }
+      RCLCPP_INFO(logger, "MD25 Motors initialized with software version '%u' and '%u'", m_software_version_front, m_software_version_rear);
+
+      success = i2c_bus->sendCommand (logger, getDeviceIdFront(), motor_mode_ ,MODE);
+      if (!success)
+      {
+        result = false;
+        RCLCPP_ERROR(logger, "MD25 Motors setting mode front device failed");
+      }
+      success = i2c_bus->sendCommand (logger, getDeviceIdRear(), motor_mode_ ,MODE);
+      if (!success)
+      {
+        result = false;
+        RCLCPP_ERROR(logger, "MD25 Motors setting mode rear device failed");
+      }
+      success = i2c_bus->sendCommand (logger, getDeviceIdFront(), acceleration_rate ,ACC_RATE);
+      if (!success)
+      {
+        result = false;
+        RCLCPP_ERROR(logger, "MD25 Motors setting acceleration mode front device failed");
+      }
+      success = i2c_bus->sendCommand (logger, getDeviceIdRear(), acceleration_rate,ACC_RATE);
+      if (!success)
+      {
+        result = false;
+        RCLCPP_ERROR(logger, "MD25 Motors setting acceleration mode rear device failed");
+      }
+      return result;
+  }
+ 
+
+  bool resetEncoders(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus) override {
+    bool success = true;
+    bool result = i2c_bus->sendCommand(logger, getDeviceIdFront(), ENCODER_RESET,CMD);
+    if (!result) {
+      RCLCPP_ERROR(logger, "resetEncoders: Could not reset front encoders");
+      success = false;
+    }
+    result = i2c_bus->sendCommand(logger, getDeviceIdRear(), ENCODER_RESET,CMD);
+    if (!result) {
+      RCLCPP_ERROR(logger, "resetEncoders: Could not reset rear encoders");
+      success = false;
+    }
+    m_encoder_1_ticks = 0;
+    m_encoder_2_ticks = 0;
+    m_encoder_3_ticks = 0;
+    m_encoder_4_ticks = 0;
+
+    return success;
+  }
+
+  std::vector<int> getMotorsSpeed(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, bool & success) override {
+    (void) logger; // Swallow unused warning
+    (void) i2c_bus; // Swallow unused warning
+    int speed;
+    std::vector<int> speeds;
+    speed = i2c_bus->readByte (logger, this->getDeviceIdFront(), SPD1, success);
+    if (!success)
+    {
+      RCLCPP_ERROR(logger, "MD25 Motors initialized rear device failed");
+      return speeds;
+    }
+    speeds.push_back (speed);
+    speed = i2c_bus->readByte (logger, this->getDeviceIdFront(), SPD2, success);
+    if (!success)
+    {
+      RCLCPP_ERROR(logger, "MD25 Motors initialized rear device failed");
+      return speeds;
+    }
+    speeds.push_back (speed);
+    speed = i2c_bus->readByte (logger, this->getDeviceIdRear(), SPD2, success);
+    if (!success)
+    {
+      RCLCPP_ERROR(logger, "MD25 Motors initialized rear device failed");
+      return speeds;
+    }
+    speeds.push_back (speed);
+    speed = i2c_bus->readByte (logger, this->getDeviceIdRear(), SPD1, success);
+    if (!success)
+    {
+      RCLCPP_ERROR(logger, "MD25 Motors initialized rear device failed");
+      return speeds;
+    }
+    speeds.push_back (speed);
+    return speeds;
+  }
+
+  std::vector<int> readEncoders(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, bool & success) override {
+    std::vector<int> encoderValues;
+    int ticks_l;
+    int ticks_r;
+    std::tie(ticks_l, ticks_r) = i2c_bus->readTwoIntFrom8Bytes (logger, this->getDeviceIdFront(), ENC1, success);
+    encoderValues.push_back (ticks_l);
+    encoderValues.push_back (ticks_r);
+    std::tie(ticks_l, ticks_r) = i2c_bus->readTwoIntFrom8Bytes (logger, this->getDeviceIdRear(), ENC1, success);
+    encoderValues.push_back (ticks_l);
+    encoderValues.push_back (ticks_r);
+    return encoderValues;
+  }
+
+  virtual bool stopMotors(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus){
+   bool success = true;
+    bool result = i2c_bus->sendCommand(logger, getDeviceIdFront(), ENCODER_RESET,CMD);
+    if (!result) {
+      RCLCPP_ERROR(logger, "resetEncoders: Could not reset front encoders");
+      success = false;
+    }
+    result = i2c_bus->sendCommand(logger, getDeviceIdRear(), ENCODER_RESET,CMD);
+    if (!result) {
+      RCLCPP_ERROR(logger, "resetEncoders: Could not reset rear encoders");
+      success = false;
+    }
+    return success;
+  }
   //-------------------- 
-  bool setup(const rclcpp::Logger logger);
   int getSoftwareVersion(const rclcpp::Logger logger, int deviceId);
   int getBatteryVolts(const rclcpp::Logger logger, int deviceId);
   int getAccelerationRate(const rclcpp::Logger logger, int deviceId);
@@ -59,7 +190,6 @@ public:
   bool haltMotors(const rclcpp::Logger logger, int deviceId);
   bool setMode(const rclcpp::Logger logger, int deviceId, int mode);
   bool setAccelerationRate(const rclcpp::Logger logger, int deviceId, int rate);
-  bool resetEncoders(const rclcpp::Logger logger, int deviceId);
   std::pair<int, int> readEncoders(const rclcpp::Logger logger, int deviceId);
   bool writeSpeed(const rclcpp::Logger logger, int deviceId, int left,int right);
  
@@ -73,25 +203,37 @@ public:
 
   //-------------
 private:
-  std::mutex lock;
-  int readByte(const rclcpp::Logger logger, int deviceId, int reg);
-  std::pair<int, int> readTwoBytes(const rclcpp::Logger logger, int deviceId, int reg);
-  bool sendCommand(const rclcpp::Logger logger, int deviceId, int command,int reg);
-  bool selectDevice(const rclcpp::Logger logger, int deviceId);
-  int readEncoder(const rclcpp::Logger logger, int deviceId, int LR);
-  bool lastReadEncoders = false;
-  int m_fd = -1;
-  //int address = 0x58;
+
+  //   Mode Register
+  // The mode register selects which mode of operation and I2C data input type the user requires. The options being:
+  // 0,    (default setting) If a value of 0 is written to the mode register then the meaning of the speed registers is literal speeds in the range of 0 (full reverse)  128 (stop)   255 (full forward).
+  // 1,    Mode 1 is similar to mode 0, except that the speed registers are interpreted as signed values. The meaning of the speed registers is literal speeds in the range of -128 (full reverse)   0 (Stop)   127 (full forward).
+  // 2,    Writing a value of  2 to the mode register will make Speed1 control both motors speed, and Speed2 becomes the turn value. 
+  // Data is in the range of 0 (full reverse)  128 (stop)  255 (full  forward).
+  // 3,    Mode 3 is similar to mode 2, except that the speed registers are interpreted as signed values. 
+  // Data is in the range of -128  (full reverse)  0 (stop)   127 (full forward)
+  int motor_mode_ = 1;
+
+  // Acceleration Rate 
+  // If you require a controlled acceleration period for the attached motors to reach there ultimate speed, the MD25 has a register to provide this. 
+  // It works by using a value into the acceleration register and incrementing the power by that value. Changing between the current speed of the motors 
+  // and the new speed (from speed 1 and 2 registers). So if the motors were traveling at full speed in the forward direction (255) and were instructed 
+  // to move at full speed in reverse (0), there would be 255 steps with an acceleration register value of 1, but 128 for a value of 2. 
+  // The default acceleration value is 5, meaning the speed is changed from full forward to full reverse in 1.25 seconds. The register will accept values 
+  // of 1 up to 10 which equates to a period of only 0.65 seconds to travel from full speed in one direction to full speed in the opposite direction.
+  // See https://www.robot-electronics.co.uk/htm/md25i2c.htm
+  int acceleration_rate = 3;
+
   int deviceIdFront = 0x58;
   int deviceIdRear = 0x5A;
-  int lastDeviceId = -1;
-  bool has2Driver = true;
 
   int m_software_version_front = 0;
   int m_software_version_rear = 0;
   long m_encoder_1_ticks = 0;
   long m_encoder_2_ticks = 0;
-  const char * m_i2c_file      = nullptr;
+  long m_encoder_3_ticks = 0;
+  long m_encoder_4_ticks = 0;
+
   rclcpp::Time last_time;
   
   static const int SPD1		            = 0x00;  // speed to first motor

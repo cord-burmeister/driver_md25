@@ -22,4 +22,4 @@ bus_master:
     # to move at full speed in reverse (0), there would be 255 steps with an acceleration register value of 1, but 128 for a value of 2. 
     # The default acceleration value is 5, meaning the speed is changed from full forward to full reverse in 1.25 seconds. 
     # The register will accept values of 1 up to 10 which equates to a period of only 0.65 seconds to travel from full speed in one direction to full speed in the opposite direction.
-    acceleration_rate: 3
+    # acceleration_rate: 3
