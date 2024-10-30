@@ -188,7 +188,7 @@ bool I2cBus::writeIntsToBus(const rclcpp::Logger logger, int deviceId, uint8_t r
 
   uint8_t m_buff[maxBuffer] = {0};
   m_buff[0] = reg;
-  for (int i = 0; i < values.size(); i++)
+  for (int i = 0; i < (int) values.size(); i++)
   {
     // Index is the sequence of the integer i*4, because need 4 bytes per integer
     // plus the offset based on the register +1
@@ -240,7 +240,7 @@ bool I2cBus::writeBytesToBus(const rclcpp::Logger logger, int deviceId, uint8_t 
 
   uint8_t m_buff[maxBuffer] = {0};
   m_buff[0] = reg;
-  for (int i = 0; i < values.size(); i++)
+  for (int i = 0; i < (int) values.size(); i++)
   {
     // Index is the sequence of the bytes i, because need 1 byte per uint8_t
     // plus the offset based on the register +1
