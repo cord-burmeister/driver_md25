@@ -92,7 +92,7 @@ public:
     return encoderValues;
   }
 
-  virtual bool stopMotors(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus){
+  bool stopMotors(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus) override {
     bool success = true;
     std::vector<uint8_t> nullSpeed = {0, 0, 0, 0};   
     bool result = i2c_bus->writeBytesToBus (logger, this->getDeviceIdFront(), MOTOR_FIXED_SPEED_ADDR, nullSpeed);
@@ -102,6 +102,25 @@ public:
     }
     return success;
   }
+
+
+  bool setMotorsSpeed(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, int frontLeftSpeed, int frontRightSpeed, int rearLeftSpeed, int rearRightSpeed) override {
+
+    bool success = true;
+    std::vector<uint8_t> speed;
+    speed.push_back (frontLeftSpeed);
+    speed.push_back (frontRightSpeed);
+    speed.push_back (rearLeftSpeed);
+    speed.push_back (rearRightSpeed);   
+    bool result = i2c_bus->writeBytesToBus (logger, this->getDeviceIdFront(), MOTOR_FIXED_SPEED_ADDR, speed);
+    if (!result) {
+      RCLCPP_ERROR(logger, "setMotorsSpeed: Could not set speed");
+      success = false;
+    }
+    return success;
+  }
+
+
   //-------------------- 
   int getBatteryVolts(const rclcpp::Logger logger, int deviceId);
   bool setMode(const rclcpp::Logger logger, int deviceId, int mode);
