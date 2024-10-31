@@ -118,8 +118,6 @@ public:
 private:
 
   bool lastReadEncoders = false;
-  int deviceIdFront = 0x58;
-  int deviceIdRear = 0x5A;
   int lastDeviceId = -1;
   bool has2Driver = true;
 

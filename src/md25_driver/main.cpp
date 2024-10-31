@@ -9,6 +9,7 @@
 #include <cmath>
 #include <i2c_bus.hpp>
 #include <md25_driver/md25.hpp>
+#include <md25_driver/hiwonder.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/int16.h>
 #include <std_msgs/msg/int32.h>
@@ -53,7 +54,7 @@ private:
   double publish_motor_encoders_frequency_;
   double publish_odom_frequency_;
   double pid_frequency_;
-  bool debug_mode_ = false;
+  bool debug_mode_ = true;
   bool enable_speed_ = false;
   bool enable_odom_ = false;
   bool enable_pid_ = false;
@@ -139,7 +140,7 @@ public:
 
     //------------------------------------------
     i2c_bus.reset (new I2cBus ("/dev/i2c-1"));
-    motor.reset(new md25_driver());
+    motor.reset(new hiwonder_driver());
     bool setup = motor->setup(this->get_logger (), i2c_bus);
     
     if(!setup){
@@ -286,7 +287,7 @@ void setParams() {
     //   enable_pid_ = false;
     // }
 
-    RCLCPP_INFO(this->get_logger(),"MD25 Parameters Set");
+    RCLCPP_INFO(this->get_logger(),"bus master Parameters Set");
 }
 
 //---------------------------------------
@@ -370,6 +371,10 @@ void shutdown(){
 
 void read_encoder() {                  // Function to read and display value of encoder 2 as a long
   bool success = true;
+
+//  if (debug_mode_) {
+//       RCLCPP_INFO(this->get_logger(),"read_encoder: Start Reading encoder values");
+//  }
   std::vector<int> encoderValues = motor->readEncoders (this->get_logger(), i2c_bus, success);
   if (encoderValues.size() != 4)
   {
@@ -380,6 +385,9 @@ void read_encoder() {                  // Function to read and display value of 
   front_right_encoder = (double) encoderValues[1];			// Last encoder value right 
   rear_left_encoder	  = (double) encoderValues[2];			// Last encoder value left
   rear_right_encoder	= (double) encoderValues[3];			// Last encoder value right 
+  if (debug_mode_) {
+       RCLCPP_INFO(this->get_logger(),"read_encoder: Ended Reading encoder values");
+  }
 }
 
 void publishOdom() {
@@ -436,7 +444,7 @@ void publishOdom() {
   t.transform.translation.x = x;
   t.transform.translation.y = y;
   t.transform.rotation = tf2::toMsg (quat);
-  transform_broadcaster_->sendTransform(t);
+ // HACK TODO  transform_broadcaster_->sendTransform(t);
 
   //  next, we'll publish the odometry message over ROS 2
   nav_msgs::msg::Odometry odom;
@@ -473,6 +481,8 @@ void twistToMotors(const geometry_msgs::msg::Twist &msg){
   double vel_x = twist.linear.x;
   double vel_y = twist.linear.y;
   double vel_th = twist.angular.z;
+ 
+
   velocity_front_left   =  vel_x - vel_y - vel_th * (distance_gravity_axis + distance_gravity_wheel);
   velocity_front_right  =  vel_x + vel_y + vel_th * (distance_gravity_axis + distance_gravity_wheel);
   velocity_rear_left    =  vel_x + vel_y - vel_th * (distance_gravity_axis + distance_gravity_wheel);
@@ -483,6 +493,9 @@ void twistToMotors(const geometry_msgs::msg::Twist &msg){
   int rear_right = convertVelocityToMotorSpeed(velocity_rear_right);
   int rear_left = convertVelocityToMotorSpeed(velocity_rear_left);
 
+  if (debug_mode_) {
+       RCLCPP_INFO(this->get_logger(),"twistToMotors: %d %d %d %d", front_right, front_left, rear_right, rear_left);
+  }
   motor->setMotorsSpeed (this->get_logger(), i2c_bus, front_left, front_right, rear_left, rear_right);
 }
 

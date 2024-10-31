@@ -273,6 +273,14 @@ bool I2cBus::writeBytesToBus(const rclcpp::Logger logger, int deviceId, uint8_t 
 // it should be called inside a lock for save addressing.
 bool I2cBus::selectDevice(const rclcpp::Logger logger, int deviceId){
 
+  if (m_fd == -1)
+  {
+      RCLCPP_INFO(logger, "I2cBus::selectDevice: open the bus on  %s ", m_i2c_file);
+      m_fd = open (m_i2c_file, O_RDWR);
+      if (m_fd < 0) {
+        RCLCPP_ERROR(logger, "I2cBus::selectDevice: Failed to open the bus %s ", m_i2c_file);
+      }
+  }
   if (lastDeviceId != deviceId)
   {
     int result = ioctl(m_fd, I2C_SLAVE, deviceId);

@@ -222,30 +222,9 @@ LEFT    |                                 |  RIGHT
 */
 
 
-int md25_driver::getDeviceIdFront ()
-{
-  return deviceIdFront;
+
+
+int hiwonder_driver::getDeviceIdFront () {
+   return 52;
+//   return 0x34;
 }
-
-int md25_driver::getDeviceIdRear ()
-{
-  return deviceIdRear;
-}
-
-  int md25_driver::getFrontLeftEncoderId ()
-  {
-    return 2;
-  }
-  int md25_driver::getFrontRightEncoderId ()
-  {
-    return 1;
-  }
-  int md25_driver::getRearLeftEncoderId ()
-  {
-    return 1;
-  }
-  int md25_driver::getRearRightEncoderId ()
-  {
-    return 2;
-  }
-

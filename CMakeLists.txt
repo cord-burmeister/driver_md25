@@ -71,22 +71,23 @@ install(DIRECTORY
 )
 
 
-add_executable(marvin_bus
+add_executable(bus_master
     src/i2c_bus.cpp
     src/md25_driver/md25.cpp
+    src/md25_driver/hiwonder.cpp
     src/md25_driver/main.cpp
 )
 
-target_include_directories(marvin_bus PUBLIC
+target_include_directories(bus_master PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
 
-target_link_libraries(marvin_bus ${rclcpp_LIBRARIES})
+target_link_libraries(bus_master ${rclcpp_LIBRARIES})
 
-ament_target_dependencies(marvin_bus ${DEPENDENCIES})
+ament_target_dependencies(bus_master ${DEPENDENCIES})
 
-install(TARGETS marvin_bus
+install(TARGETS bus_master
   DESTINATION lib/${PROJECT_NAME})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
