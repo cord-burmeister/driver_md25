@@ -48,20 +48,20 @@ private:
   std::string odom =  "/odom";
 
   //-----------------------------------------------
-  const double PI = 3.14159265358979323846;
+  // configuration of the logic which is activated in the node
   double publish_current_speed_frequency_;
   double publish_motor_status_frequency_;
   double publish_motor_encoders_frequency_;
   double publish_odom_frequency_;
-  double pid_frequency_;
-  bool debug_mode_ = true;
   bool enable_speed_ = false;
-  bool enable_odom_ = false;
-  bool enable_pid_ = false;
-  
+  bool enable_odom_ = false;  
   const bool enable_twist_default = true;
   bool enable_twist_ = enable_twist_default;
   bool enable_status_ = false;
+  bool debug_mode_ = true;
+
+  const double PI = 3.14159265358979323846;
+
   double wheelDiameter = 0.210;
   double wheelTrack = 0.345;
   int cpr = 1080;
@@ -69,7 +69,6 @@ private:
   double ticksPerMeter = (cpr / wheelCircum); //1637.0222
   double max_linear_x = 1.0;
   double max_angular_z = 1.0;
-  bool has4Motor = true;
   
   int max_speed_ = 100;
 
@@ -78,6 +77,9 @@ private:
   // //   double distance_rear_wheel  = 0.36;    // This is the distance from one wheel to the other in meter
   double distance_gravity_axis  = 0.26;    // This is the distance from center of robot to the front wheel in meter
   double distance_gravity_wheel = 0.20;    // This is the distance from center of robot to the rear wheel in meter  
+
+  //-----------------------------------------------
+  // internal calcuation values for the odometry and speed control
   double velocity_front_right = 0.0;     // velocity of the right wheel in m / s 
   double velocity_front_left  = 0.0;     // velocity of the right wheel in m / s 
   double velocity_rear_right = 0.0;     // velocity of the right wheel in m / s 
@@ -90,11 +92,19 @@ private:
   double front_left_encoder = 0.0;		 // Last encoder value left
   double rear_right_encoder = 0.0;		 // Last encoder value right 
   double rear_left_encoder = 0.0;			 // Last encoder value left
-
   double x = 0.0;					 // current x position
   double y = 0.0;					 // current y position
   double theta = 0.0;				 // current rotation
 
+  //-----------------------------------------------
+  // Motor unit parameter
+  double encoder_counts_per_output_shaft_turn_ = 360.0; // The encoder counts per output shaft turn will consider the encoder values as well as the gear ratio of your motor.
+  double max_shaft_turn_per_minute_ = 170.0; // This is the maximum number of shaft turns per minute 
+
+
+
+  //-----------------------------------------------
+  // ROS messages 
   geometry_msgs::msg::Quaternion odom_quat;
   tf2::Quaternion quat;
 
@@ -250,17 +260,25 @@ void setParams() {
         enable_odom_ = true;
       }
     }
-    // if(!ros::param::get("~motor_mode",motor_mode_)){
-    //   motor_mode_ = 1;
-    // }
+    
+    // getting the motor unit parameter
+    if (!this->get_parameter("encoder_counts_per_output_shaft_turn", encoder_counts_per_output_shaft_turn_)) {
+      encoder_counts_per_output_shaft_turn_ = 360.0;
+    }
+    if (!this->get_parameter("max_shaft_turn_per_minute", max_shaft_turn_per_minute_)) {
+      max_shaft_turn_per_minute_ = 170.0;
+    }
+
+
+
+    if(!this->get_parameter("debug_mode",debug_mode_)){
+      debug_mode_ = false;
+    }
     // if(!ros::param::get("~wheel_diameter",wheelDiameter)){
     //   wheelDiameter = 0.210;
     // }
     // if(!ros::param::get("~wheel_track",wheelTrack)){
     //   wheelTrack = 0.355;
-    // }
-    // if(!ros::param::get("~encoder_clicks",cpr)){
-    //   cpr = 1080;
     // }
     // if(!ros::param::get("~max_speed",max_speed_)){
     //   max_speed_ = 100;
@@ -280,9 +298,7 @@ void setParams() {
     // if(!ros::param::get("~pid_frequency",pid_frequency_)){
     //   pid_frequency_ = 10.0;
     // }
-    // if(!ros::param::get("~debug_mode",debug_mode_)){
-    //   debug_mode_ = false;
-    // }
+
     // if(!ros::param::get("~enable_pid",enable_pid_)){
     //   enable_pid_ = false;
     // }
@@ -297,10 +313,6 @@ void callbackReset(const std::shared_ptr<std_srvs::srv::Trigger::Request> reques
 {
     (void) request;
     motor->resetEncoders(this->get_logger (), i2c_bus);   
-    if (has4Motor)
-    {
-      motor->resetEncoders(this->get_logger (), i2c_bus);
-    }
     response->success = true;
     response->message = "Encoders Reset";    
     RCLCPP_INFO(this->get_logger(),"Encoders Reset");
@@ -358,7 +370,7 @@ void publishMotorStatus(){
  }
 
 //---------------------------------------
-/* Direct Stop Both Motors*/
+/* Direct Stop all  Motors*/
 void stop(){
     motor->stopMotors(this->get_logger (), i2c_bus);
  }
@@ -369,7 +381,7 @@ void shutdown(){
    stop();
  }
 
-void read_encoder() {                  // Function to read and display value of encoder 2 as a long
+void read_encoder() {                  // Function to read and display value of encoder as a long
   bool success = true;
 
 //  if (debug_mode_) {
@@ -381,10 +393,10 @@ void read_encoder() {                  // Function to read and display value of 
        RCLCPP_ERROR(this->get_logger(),"read_encoder: Can not read 4 encoder values");
        return;
   }
-  front_left_encoder	= (double) encoderValues[0];			// Last encoder value left
-  front_right_encoder = (double) encoderValues[1];			// Last encoder value right 
-  rear_left_encoder	  = (double) encoderValues[2];			// Last encoder value left
-  rear_right_encoder	= (double) encoderValues[3];			// Last encoder value right 
+  front_left_encoder	= (double) encoderValues[0];			// Last encoder value front left
+  front_right_encoder = (double) encoderValues[1];			// Last encoder value front right 
+  rear_left_encoder	  = (double) encoderValues[2];			// Last encoder value rear left
+  rear_right_encoder	= (double) encoderValues[3];			// Last encoder value rear right 
   if (debug_mode_) {
        RCLCPP_INFO(this->get_logger(),"read_encoder: Ended Reading encoder values");
   }
@@ -395,7 +407,6 @@ void publishOdom() {
 
   double dxy = 0.0;
   double dth = 0.0;
-  // ros::Time current_time = nh.now();
   rclcpp::Time current_time = this->get_clock()->now();
   double dt;
   double distance_left = 0.0;		 // calculated travel distance right 
@@ -500,7 +511,7 @@ void twistToMotors(const geometry_msgs::msg::Twist &msg){
 }
 
 // Convert from m/s speed into the command values from the 
-// Motor and the number of the speed
+// Motor and the number of the speed values in the motor driver
 int convertVelocityToMotorSpeed (double speed)
 {
     if ((speed < 0.0001) && (speed > -0.0001))

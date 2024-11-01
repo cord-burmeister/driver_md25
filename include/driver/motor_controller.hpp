@@ -41,17 +41,30 @@ class MotorController
 public:
 
   //-------------------- 
+  // The logic for the motor driver assumes that the internal speed definition is based 
+  // -max speed .. max speed. So no speed is zero. The motor driver shall be configured 
+  // in such a mode. 
   virtual bool setup(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus) { 
     (void) logger; // Swallow unused warning
     (void) i2c_bus; // Swallow unused warning
     return true;
   }
 
+  //-------------------- 
+  // Reset the encoders to a zero value. 
   virtual bool resetEncoders(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus) {
     (void) logger; // Swallow unused warning
     (void) i2c_bus; // Swallow unused warning
     return true;
   }
+
+  //-------------------- 
+  // read the internal speed values. This is not the robot speed.
+  // Convention of the order of values is 
+  // front_left_encoder	= (double) encoderValues[0];			// Last encoder value front left
+  // front_right_encoder = (double) encoderValues[1];			// Last encoder value front right 
+  // rear_left_encoder	  = (double) encoderValues[2];			// Last encoder value rear left
+  // rear_right_encoder	= (double) encoderValues[3];			// Last encoder value rear right 
 
   virtual std::vector<uint8_t> getMotorsSpeed(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, bool & success){
     (void) logger; // Swallow unused warning
@@ -61,6 +74,13 @@ public:
     return speeds;
   }
 
+  //-------------------- 
+  // Read the current encoder values
+  // Convention of the order of values is 
+  // front_left_encoder	= (double) encoderValues[0];			// Last encoder value front left
+  // front_right_encoder = (double) encoderValues[1];			// Last encoder value front right 
+  // rear_left_encoder	  = (double) encoderValues[2];			// Last encoder value rear left
+  // rear_right_encoder	= (double) encoderValues[3];			// Last encoder value rear right 
  virtual std::vector<int> readEncoders(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, bool & success) {
     (void) logger; // Swallow unused warning
     (void) i2c_bus; // Swallow unused warning
@@ -69,6 +89,8 @@ public:
     return encoderValues;
   }
 
+  //-------------------- 
+  // Stop the motors 
   virtual bool stopMotors(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus){
     (void) logger; // Swallow unused warning
     (void) i2c_bus; // Swallow unused warning

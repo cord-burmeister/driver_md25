@@ -37,6 +37,33 @@
 
 #define BUF_LEN 10
 
+
+/*
+    Wiring Diagram 
+                      FRONT                        
+        +---------------------------------+        
+        |           +---------+           |        
+        |           |         |           |        
+      +---------+   | 0x34    |   +---------+      
+      | | 1     |   |         |   |     3 | |      
+      | |       |   +--+---+--+   |       | |      
+      +---------+      +---+      +---------+      
+        |                                 |        
+        |                                 |        
+LEFT    |                                 |  RIGHT 
+        |                                 |        
+        |                                 |        
+      +--------+                  +---------+      
+      | | 2    |                  |     4 | |      
+      | |      |                  |       | |      
+      +--------+                  +---------+      
+        |                                 |        
+        +---------------------------------+        
+                       REAR                        
+                                                   
+*/
+
+
 class hiwonder_driver : public MotorController
 {
 public:
@@ -72,28 +99,44 @@ public:
       RCLCPP_ERROR(logger, "resetEncoders: Could not reset encoders values");
       success = false;
     }
-    m_encoder_1_ticks = 0;
-    m_encoder_2_ticks = 0;
-    m_encoder_3_ticks = 0;
-    m_encoder_4_ticks = 0;
     return success;
   }
 
+  // Convention of the order of values is 
+  // front_left_encoder	= (double) encoderValues[0];			// Last encoder value front left
+  // front_right_encoder = (double) encoderValues[1];			// Last encoder value front right 
+  // rear_left_encoder	  = (double) encoderValues[2];			// Last encoder value rear left
+  // rear_right_encoder	= (double) encoderValues[3];			// Last encoder value rear right 
   std::vector<uint8_t> getMotorsSpeed(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, bool & success) override {
-    (void) logger; // Swallow unused warning
-    (void) i2c_bus; // Swallow unused warning
-    std::vector<uint8_t> result = i2c_bus->readBytesFromBus (logger, this->getDeviceIdFront(), MOTOR_FIXED_SPEED_ADDR, 4, success);
+    std::vector<uint8_t> result;
+    // Values are sorted by number from the controller
+    std::vector<uint8_t> values = i2c_bus->readBytesFromBus (logger, this->getDeviceIdFront(), MOTOR_FIXED_SPEED_ADDR, 4, success);
     if (!success) {
       RCLCPP_ERROR(logger, "getMotorsSpeed: Could not read speed");
       success = false;
     }
-
+    // Arrange values based on convention
+    result.push_back(values[0]); // front left
+    result.push_back(values[2]); // front right 
+    result.push_back(values[1]); // rear left
+    result.push_back(values[3]); // rear right 
     return result;
   }
 
+  // Convention of the order of values is 
+  // front_left_encoder	= (double) encoderValues[0];			// Last encoder value front left
+  // front_right_encoder = (double) encoderValues[1];			// Last encoder value front right 
+  // rear_left_encoder	  = (double) encoderValues[2];			// Last encoder value rear left
+  // rear_right_encoder	= (double) encoderValues[3];			// Last encoder value rear right 
   std::vector<int> readEncoders(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, bool & success) override {
-    std::vector<int> encoderValues = i2c_bus->readIntsFromBus (logger, this->getDeviceIdFront(), MOTOR_ENCODER_TOTAL_ADDR, 4, success);
-    return encoderValues;
+    std::vector<int> result;
+    std::vector<int> values = i2c_bus->readIntsFromBus (logger, this->getDeviceIdFront(), MOTOR_ENCODER_TOTAL_ADDR, 4, success);
+    // Arrange values based on convention
+    result.push_back(values[0]); // front left
+    result.push_back(values[2]); // front right 
+    result.push_back(values[1]); // rear left
+    result.push_back(values[3]); // rear right 
+    return result;
   }
 
   bool stopMotors(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus) override {
@@ -108,13 +151,16 @@ public:
   }
 
 
+  // Unit: pulse count per 10 milliseconds, range: (depending on the specific encoder motor, 
+  // affected by the number of encoder wires, voltage, load, etc., generally around ±50))
   bool setMotorsSpeed(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, int frontLeftSpeed, int frontRightSpeed, int rearLeftSpeed, int rearRightSpeed) override {
 
     bool success = true;
     std::vector<uint8_t> speed;
+    // Arrange values based on inverted convention
     speed.push_back (frontLeftSpeed);
-    speed.push_back (frontRightSpeed);
     speed.push_back (rearLeftSpeed);
+    speed.push_back (frontRightSpeed);
     speed.push_back (rearRightSpeed);   
     bool result = i2c_bus->writeBytesToBus (logger, this->getDeviceIdFront(), MOTOR_FIXED_SPEED_ADDR, speed);
     if (!result) {
@@ -140,14 +186,6 @@ public:
   //-------------
 private:
 
-  bool lastReadEncoders = false;
-
-  long m_encoder_1_ticks = 0;
-  long m_encoder_2_ticks = 0;
-  long m_encoder_3_ticks = 0;
-  long m_encoder_4_ticks = 0;
-
-  rclcpp::Time last_time;
   
 
 
