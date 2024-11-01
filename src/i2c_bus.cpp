@@ -66,6 +66,61 @@ I2cBus::~I2cBus(){ close(m_fd);}
 
 
 //-------------------------------------------------------
+ std::vector<uint8_t> I2cBus::readBytesFromBus(const rclcpp::Logger logger, int deviceId, uint8_t reg, int count, bool & success){
+
+  const int maxBuffer = 24 * 4;
+  int bytes = count * 1;
+  std::vector<uint8_t> result;
+
+  if (count <= 0)
+  {
+    RCLCPP_ERROR(logger, "I2cBus::readBytesFromBus: count parameter must be greater than zero");
+    success = false;
+    return result;
+  }  
+  if (maxBuffer < bytes)
+  {
+    RCLCPP_ERROR(logger, "I2cBus::readBytesFromBus: count defined buffer exceed maxBuffer");
+    success = false;
+    return result;
+  }  
+
+  uint8_t m_buff[maxBuffer] = {0};
+  m_buff[0] = reg;
+  lock.lock();
+  success = true;
+  if (!selectDevice (logger, deviceId))
+  {
+    RCLCPP_ERROR(logger, "I2cBus::readBytesFromBus: Could select device on i2c");
+    success = false;
+    lock.unlock();
+    return result;
+  }  
+  if (write(m_fd, m_buff, 1) != 1) {
+    RCLCPP_ERROR(logger, "I2cBus::readBytesFromBus: Could not write to i2c");
+    success = false;
+    lock.unlock();
+    return result;
+  } else if (read(m_fd, m_buff, bytes) != bytes) {
+    RCLCPP_ERROR(logger, "I2cBus::readBytesFromBus: Could not read register values");
+    success = false;
+    lock.unlock();
+    return result;
+  }
+  lock.unlock();
+
+  for (int i = 0; i < count; i++)
+  {
+    uint8_t value = m_buff[i];
+    result.push_back (value);
+  }
+  return result;
+}
+
+
+
+
+//-------------------------------------------------------
  std::vector<int> I2cBus::readIntsFromBus(const rclcpp::Logger logger, int deviceId, uint8_t reg, int count, bool & success){
 
   const int maxBuffer = 24 * 4;

@@ -47,6 +47,7 @@ public:
   std::pair<int, int> readTwoIntFrom8Bytes(const rclcpp::Logger logger, int deviceId, uint8_t reg, bool & success);
   bool sendCommand(const rclcpp::Logger logger, int deviceId, uint8_t command,uint8_t reg);
   bool selectDevice(const rclcpp::Logger logger, int deviceId);
+  std::vector<uint8_t> readBytesFromBus(const rclcpp::Logger logger, int deviceId, uint8_t reg, int count, bool & success);
   std::vector<int> readIntsFromBus(const rclcpp::Logger logger, int deviceId, uint8_t reg, int count, bool & success);
   bool writeIntsToBus(const rclcpp::Logger logger, int deviceId, uint8_t reg, std::vector<int> values);
   bool writeBytesToBus(const rclcpp::Logger logger, int deviceId, uint8_t reg, std::vector<uint8_t> values);

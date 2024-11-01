@@ -53,11 +53,11 @@ public:
     return true;
   }
 
-  virtual std::vector<int> getMotorsSpeed(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, bool & success){
+  virtual std::vector<uint8_t> getMotorsSpeed(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, bool & success){
     (void) logger; // Swallow unused warning
     (void) i2c_bus; // Swallow unused warning
     success = true;
-    std::vector<int> speeds;
+    std::vector<uint8_t> speeds;
     return speeds;
   }
 

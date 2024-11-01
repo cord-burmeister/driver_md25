@@ -33,7 +33,7 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <i2c_bus.hpp>
-#include <md25_driver/motor_controller.hpp>
+#include <driver/motor_controller.hpp>
 
 #define BUF_LEN 10
 
@@ -79,12 +79,16 @@ public:
     return success;
   }
 
-  std::vector<int> getMotorsSpeed(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, bool & success) override {
+  std::vector<uint8_t> getMotorsSpeed(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, bool & success) override {
     (void) logger; // Swallow unused warning
     (void) i2c_bus; // Swallow unused warning
-    std::vector<int> speeds;
-    
-    return speeds;
+    std::vector<uint8_t> result = i2c_bus->readBytesFromBus (logger, this->getDeviceIdFront(), MOTOR_FIXED_SPEED_ADDR, 4, success);
+    if (!success) {
+      RCLCPP_ERROR(logger, "getMotorsSpeed: Could not read speed");
+      success = false;
+    }
+
+    return result;
   }
 
   std::vector<int> readEncoders(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, bool & success) override {
@@ -137,8 +141,6 @@ public:
 private:
 
   bool lastReadEncoders = false;
-  int lastDeviceId = -1;
-  bool has2Driver = true;
 
   long m_encoder_1_ticks = 0;
   long m_encoder_2_ticks = 0;

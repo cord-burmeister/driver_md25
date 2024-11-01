@@ -1,5 +1,5 @@
 #include <i2c_bus.hpp>
-#include <md25_driver/md25.hpp>
+#include <driver/md25.hpp>
 
 md25_driver::md25_driver( ) {}
 md25_driver::~md25_driver() {}

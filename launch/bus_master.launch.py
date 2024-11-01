@@ -47,12 +47,12 @@ def generate_launch_description():
     #mecanum_launch_value = LaunchConfiguration('mecanum')
 
     # Setup project paths
-    pkg_project_bringup = get_package_share_directory('driver_md25')
+    pkg_project_bringup = get_package_share_directory('marvin3_bus')
 
 
     # Bridge ROS topics and Gazebo messages for establishing communication
     busmaster = Node(
-        package='driver_md25',
+        package='marvin3_bus',
         executable='bus_master',
         parameters=[{
             'config_file': os.path.join(pkg_project_bringup, 'config', 'bus_master.yaml'),

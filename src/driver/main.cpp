@@ -8,8 +8,8 @@
 #include <chrono>
 #include <cmath>
 #include <i2c_bus.hpp>
-#include <md25_driver/md25.hpp>
-#include <md25_driver/hiwonder.hpp>
+#include <driver/md25.hpp>
+#include <driver/hiwonder.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/int16.h>
 #include <std_msgs/msg/int32.h>
@@ -322,7 +322,7 @@ void stopMotorCallback(const std::shared_ptr<std_srvs::srv::Trigger::Request> re
 void publishCurrentSpeed(){
   std_msgs::msg::ByteMultiArray barry;
   bool success = true;
-  std::vector<int> speeds = motor->getMotorsSpeed (this->get_logger(), i2c_bus, success);
+  std::vector<uint8_t> speeds = motor->getMotorsSpeed (this->get_logger(), i2c_bus, success);
   barry.data.clear();
   for (size_t i = 0; i < speeds.size(); ++i) {
     barry.data.push_back(i);

@@ -1,5 +1,5 @@
 #include <i2c_bus.hpp>
-#include <md25_driver/hiwonder.hpp>
+#include <driver/hiwonder.hpp>
 
 hiwonder_driver::hiwonder_driver( ) {}
 hiwonder_driver::~hiwonder_driver() {}

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>driver_md25</name>
+  <name>marvin3_bus</name>
   <version>0.1.0</version>
   <description>MD25 based drive system for rasberry pi</description>
   <maintainer email="cord.burmeister@live.de">marvin</maintainer>

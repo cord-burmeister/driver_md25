@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(driver_md25)
+project(marvin3_bus)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -57,8 +57,8 @@ include_directories(
 )
 
 install(
-  DIRECTORY include/md25_driver/
-  DESTINATION include/md25_driver/
+  DIRECTORY include/driver/
+  DESTINATION include/driver/
 )
 
 install(DIRECTORY
@@ -73,15 +73,14 @@ install(DIRECTORY
 
 add_executable(bus_master
     src/i2c_bus.cpp
-    src/md25_driver/md25.cpp
-    src/md25_driver/hiwonder.cpp
-    src/md25_driver/main.cpp
+    src/driver/md25.cpp
+    src/driver/hiwonder.cpp
+    src/driver/main.cpp
 )
 
 target_include_directories(bus_master PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-
 
 target_link_libraries(bus_master ${rclcpp_LIBRARIES})
 
