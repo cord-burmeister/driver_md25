@@ -60,23 +60,23 @@ private:
   bool enable_status_ = false;
   bool debug_mode_ = true;
 
-  const double PI = 3.14159265358979323846;
 
-  double wheelDiameter = 0.210;
-  double wheelTrack = 0.345;
-  int cpr = 1080;
-  double wheelCircum =  PI * wheelDiameter; //0.65973
-  double ticksPerMeter = (cpr / wheelCircum); //1637.0222
+//-----------------------------------------------
+// configuration parameter of the physical robot
+  
+  const double PI = 3.14159265358979323846;
+  double wheel_diameter = 0.210;
+
+
+  
   double max_linear_x = 1.0;
   double max_angular_z = 1.0;
   
-  int max_speed_ = 100;
+  double  max_speed_ = 100.0;
 
   double width_robot  = 0.33;    // This is the distance from one wheel to the other in meter
-  // // double distance_front_wheel  = 0.36;    // This is the distance from center of robot to the front wheel in meter
-  // //   double distance_rear_wheel  = 0.36;    // This is the distance from one wheel to the other in meter
-  double distance_gravity_axis  = 0.26;    // This is the distance from center of robot to the front wheel in meter
-  double distance_gravity_wheel = 0.20;    // This is the distance from center of robot to the rear wheel in meter  
+  double distance_front_wheel  = 0.26;    // This is the distance from center of robot to the front wheel in meter
+  double distance_rear_wheel = 0.20;    // This is the distance from center of robot to the rear wheel in meter  
 
   //-----------------------------------------------
   // internal calcuation values for the odometry and speed control
@@ -145,8 +145,19 @@ public:
     this->declare_parameter<bool>("enable_odom", false);    
     this->declare_parameter<bool>("enable_status", false);       
     this->declare_parameter<bool>("enable_twist", enable_twist_default);    
+
+    this->declare_parameter<double>("encoder_counts_per_output_shaft_turn", 360.0);
+    this->declare_parameter<double>("max_shaft_turn_per_minute", 170.0);
+    this->declare_parameter<double>("wheel_diameter", 0.1);
+    this->declare_parameter<double>("width_robot", 0.1);
+    this->declare_parameter<double>("distance_front_wheel", 0.26);
+    this->declare_parameter<double>("distance_rear_wheel", 0.2);
+   
+    this->declare_parameter<double>("max_speed", 100.0);
    
     setParams();
+
+    calculateInternalParams();
 
     //------------------------------------------
     i2c_bus.reset (new I2cBus ("/dev/i2c-1"));
@@ -201,12 +212,6 @@ public:
         motor_status_publisher_ = this->create_publisher<std_msgs::msg::ByteMultiArray>("motor_status", 1);
         RCLCPP_INFO(this->get_logger(), "MD25 Motor Status Publish Enabled");
     }
-
-    // TODO   
-    // if(enable_pid_){
-    //   pid_timer_ = nh->createTimer(ros::Duration(1.0/pid_frequency_), &MD25MotorDriverROSWrapper::UpdatePID,this);
-    //   RCLCPP_INFO(this->get_logger(),"MD25 PID Enabled");
-    // }
   }
 
 //---------------------------------------
@@ -269,17 +274,30 @@ void setParams() {
       max_shaft_turn_per_minute_ = 170.0;
     }
 
+    // getting the robot parameter values
+    if (!this->get_parameter("wheel_diameter", wheel_diameter)) {
+      wheel_diameter = 0.1;
+    }
+    if (!this->get_parameter("width_robot", width_robot)) {
+      wheel_diameter = 0.1;
+    }
+    if (!this->get_parameter("distance_front_wheel", distance_front_wheel)) {
+      wheel_diameter = 0.1;
+    }
+    if (!this->get_parameter("distance_rear_wheel", distance_rear_wheel)) {
+      wheel_diameter = 0.1;
+    }
+
+    if (!this->get_parameter("max_speed", max_speed_)) {
+      max_speed_ = 100.0;
+    }
+
 
 
     if(!this->get_parameter("debug_mode",debug_mode_)){
       debug_mode_ = false;
     }
-    // if(!ros::param::get("~wheel_diameter",wheelDiameter)){
-    //   wheelDiameter = 0.210;
-    // }
-    // if(!ros::param::get("~wheel_track",wheelTrack)){
-    //   wheelTrack = 0.355;
-    // }
+
     // if(!ros::param::get("~max_speed",max_speed_)){
     //   max_speed_ = 100;
     // }
@@ -304,6 +322,18 @@ void setParams() {
     // }
 
     RCLCPP_INFO(this->get_logger(),"bus master Parameters Set");
+}
+
+//---------------------------------------
+/* calculate some internal values based on the input params */
+void calculateInternalParams ()
+{
+    double wheelCircum =  PI * wheel_diameter; //0.65973
+    ticks_per_meter =  1000.0 / wheelCircum * encoder_counts_per_output_shaft_turn_;    // conversion factor from meter to ticks 
+                                 // EMG30 has Encoder counts per output shaft turn 360 
+                                 // Wheel is 100mm diameter.
+                                 // circumference is then 2 * PI * Radius ==> 314,1 mm per turn
+                                 // 1000 mm / 314,1 mm * 360 ticks per round
 }
 
 //---------------------------------------
@@ -494,10 +524,10 @@ void twistToMotors(const geometry_msgs::msg::Twist &msg){
   double vel_th = twist.angular.z;
  
 
-  velocity_front_left   =  vel_x - vel_y - vel_th * (distance_gravity_axis + distance_gravity_wheel);
-  velocity_front_right  =  vel_x + vel_y + vel_th * (distance_gravity_axis + distance_gravity_wheel);
-  velocity_rear_left    =  vel_x + vel_y - vel_th * (distance_gravity_axis + distance_gravity_wheel);
-  velocity_rear_right   =  vel_x - vel_y + vel_th * (distance_gravity_axis + distance_gravity_wheel);
+  velocity_front_left   =  vel_x - vel_y - vel_th * (distance_front_wheel + distance_rear_wheel);
+  velocity_front_right  =  vel_x + vel_y + vel_th * (distance_front_wheel + distance_rear_wheel);
+  velocity_rear_left    =  vel_x + vel_y - vel_th * (distance_front_wheel + distance_rear_wheel);
+  velocity_rear_right   =  vel_x - vel_y + vel_th * (distance_front_wheel + distance_rear_wheel);
 
   int front_right = convertVelocityToMotorSpeed(velocity_front_right);
   int front_left = convertVelocityToMotorSpeed(velocity_front_left);
@@ -521,25 +551,25 @@ int convertVelocityToMotorSpeed (double speed)
     }
     if (speed >= maximumSpeed)
     {
-        return 128;
+        return (int) max_speed_;
     }
     if (speed <= - maximumSpeed)
     {
-        return -128;
+        return -(int) max_speed_;
     }
     // Maximum speed is divided by the maximum speed to get the 
     // steps in which the speed can be controlled. 
-    // Intended speed divided by these steps gives the number for the MD25
-    int emg30Speed = (speed / (maximumSpeed / 127.0));
-    if (emg30Speed  > 128)
+    // Intended speed divided by these steps gives the number for the motor
+    double emg30Speed = (speed / (maximumSpeed / max_speed_));
+    if (emg30Speed  > max_speed_)
     {
-        emg30Speed = 128;
+        emg30Speed = max_speed_;
     }
-    if (emg30Speed  < -128)
+    if (emg30Speed  < -max_speed_)
     {
-        emg30Speed = -128;
+        emg30Speed = -max_speed_;
     }
-    return emg30Speed ;
+    return (int)emg30Speed ;
 }
 
 //---------------------------------------

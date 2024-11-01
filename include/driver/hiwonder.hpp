@@ -171,17 +171,7 @@ public:
   }
 
 
-  //-------------------- 
-  int getBatteryVolts(const rclcpp::Logger logger, int deviceId);
-  bool setMode(const rclcpp::Logger logger, int deviceId, int mode);
-  bool writeSpeed(const rclcpp::Logger logger, int deviceId, int left,int right);
- 
   int getDeviceIdFront ();
-
-  int getFrontLeftEncoderId ();
-  int getFrontRightEncoderId ();
-  int getRearLeftEncoderId ();
-  int getRearRightEncoderId ();
 
   //-------------
 private:
