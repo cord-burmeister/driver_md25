@@ -279,6 +279,7 @@ bool I2cBus::selectDevice(const rclcpp::Logger logger, int deviceId){
       m_fd = open (m_i2c_file, O_RDWR);
       if (m_fd < 0) {
         RCLCPP_ERROR(logger, "I2cBus::selectDevice: Failed to open the bus %s ", m_i2c_file);
+        return false;
       }
   }
   if (lastDeviceId != deviceId)
