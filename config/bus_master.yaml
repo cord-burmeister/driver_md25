@@ -3,9 +3,9 @@ bus_master:
   ros__parameters:
     # Activate the subscription to the cmd_vel command which will be dispatched to the motor
     enable_twist: true
-    # Enable the publishing of the odometry infiormation via events.
+    # Enable the publishing of the odometry information via events.
     enable_odom: true
-    # Frequency to publish odometry infiormation. Publishing will disbaled, when set to 0.0
+    # Frequency to publish odometry information. Publishing will disabled, when set to 0.0
     publish_odom_frequency : 10.0
     # Enable the publishing of the motor speed information via events.
     enable_speed: true
@@ -13,7 +13,7 @@ bus_master:
     publish_current_speed_frequency: 10.0
     # Enable the publishing of the motor status information via events.
     enable_status: true
-    # Frequency to publish motor status information like used current. Publishing will disbaled, when set to 0.0
+    # Frequency to publish motor status information like used current. Publishing will disabled, when set to 0.0
     publish_motor_status_frequency: 10.0
     # Acceleration Rate 
     # If you require a controlled acceleration period for the attached motors to reach there ultimate speed, the MD25 has a register to provide this. 
@@ -23,3 +23,29 @@ bus_master:
     # The default acceleration value is 5, meaning the speed is changed from full forward to full reverse in 1.25 seconds. 
     # The register will accept values of 1 up to 10 which equates to a period of only 0.65 seconds to travel from full speed in one direction to full speed in the opposite direction.
     # acceleration_rate: 3
+
+    # Here are some values to make the conversion calculation for speed and odometry
+    # Start with the motor parameter
+    # Using here the values for the EMG30 Motor. See https://www.robot-electronics.co.uk/htm/emg30.htm for details.
+    # The encoder counts per output shaft turn will consider the encoder values as well as the gear ratio of your motor.
+    encoder_counts_per_output_shaft_turn: 360
+    # This is the maximum number of shaft turns per minute. This will be used to calculate the maximum speed
+    max_shaft_turn_per_minute: 170 
+
+    # The values for the motor driver. This is independent from the motor unit.
+    # max_speed is the maximum internal value for the motor driver to control the 
+    # speed of the motor based on a open loop principal driving the tick counts 
+    max_speed: 100.0
+
+    # Then some robot values 
+    # wheel diameter in meter
+    wheel_diameter: 0.1
+    # Activate some additional logging which might be helpful when integrating with the hardware.
+    debug_mode: false
+
+    # with of the robot from wheel to wheel 
+    width_robot: 0.33
+    # This is the distance from center of robot to the front wheel in meter
+    distance_front_wheel: 0.26
+    # This is the distance from center of robot to the rear wheel in meter  
+    distance_rear_wheel: 0.20

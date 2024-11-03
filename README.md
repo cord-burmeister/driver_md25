@@ -8,12 +8,14 @@ Ros driver for drivers for a mecanum robot
 
 The bus master project is a ROS driver for a mecanum robot. It provides functionalities to control the robot's movement, read sensor data, and publish odometry information. The project is designed to work with the MD25 motor driver and the HiWonder motor driver.
 
+> **Note:** The MD25 driver is not integrated. There is a wiring problem i could solve. 
+
 ### Features
 
 - Control the robot's movement using ROS topics
 - Read motor speed and encoder values
 - Publish odometry information
-- Support for both MD25 and HiWonder motor drivers
+- Support for HiWonder motor drivers
 
 ### Usage Instructions
 
