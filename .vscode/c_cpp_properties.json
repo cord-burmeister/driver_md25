@@ -1,0 +1,31 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/marvin/master3_bot_ws/install/marvin3_bus/include/**",
+        "/home/marvin/master3_bot_ws/install/driver_md25/include/**",
+        "/home/marvin/master3_nav_ws/install/sdformat_urdf/include/**",
+        "/home/marvin/master3_nav_ws/install/ros_ign_interfaces/include/**",
+        "/home/marvin/master3_nav_ws/install/ros_gz_sim/include/**",
+        "/home/marvin/master3_nav_ws/install/ros_gz_bridge/include/**",
+        "/home/marvin/master3_nav_ws/install/ros_gz_interfaces/include/**",
+        "/home/marvin/master3_nav_ws/install/multirobot_map_merge/include/**",
+        "/home/marvin/master3_nav_ws/install/master3_bt3/include/**",
+        "/home/marvin/master3_nav_ws/install/explore_lite/include/**",
+        "/opt/ros/humble/include/**",
+        "/home/marvin/master3_bot_ws/src/driver_md25/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}
