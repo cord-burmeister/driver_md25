@@ -117,9 +117,9 @@ public:
     }
     // Arrange values based on convention
     result.push_back(values[0]); // front left
-    result.push_back(values[2]); // front right 
+    result.push_back(-values[2]); // front right 
     result.push_back(values[1]); // rear left
-    result.push_back(values[3]); // rear right 
+    result.push_back(-values[3]); // rear right 
     return result;
   }
 
@@ -133,9 +133,9 @@ public:
     std::vector<int> values = i2c_bus->readIntsFromBus (logger, this->getDeviceIdFront(), MOTOR_ENCODER_TOTAL_ADDR, 4, success);
     // Arrange values based on convention
     result.push_back(values[0]); // front left
-    result.push_back(values[2]); // front right 
+    result.push_back(-values[2]); // front right 
     result.push_back(values[1]); // rear left
-    result.push_back(values[3]); // rear right 
+    result.push_back(-values[3]); // rear right 
     return result;
   }
 
@@ -160,8 +160,8 @@ public:
     // Arrange values based on inverted convention
     speed.push_back (frontLeftSpeed);
     speed.push_back (rearLeftSpeed);
-    speed.push_back (frontRightSpeed);
-    speed.push_back (rearRightSpeed);   
+    speed.push_back (-frontRightSpeed);
+    speed.push_back (-rearRightSpeed);   
     bool result = i2c_bus->writeBytesToBus (logger, this->getDeviceIdFront(), MOTOR_FIXED_SPEED_ADDR, speed);
     if (!result) {
       RCLCPP_ERROR(logger, "setMotorsSpeed: Could not set speed");

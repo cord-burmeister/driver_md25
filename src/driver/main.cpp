@@ -65,7 +65,7 @@ private:
 // configuration parameter of the physical robot
   
   const double PI = 3.14159265358979323846;
-  double wheel_diameter = 0.210;
+  double wheel_diameter = 0.10;
 
 
   
@@ -114,7 +114,7 @@ private:
                                  // circumference is then 2 * PI * Radius ==> 314,1 mm per turn
                                  // 1000 mm / 314,1 mm * 360 ticks per round
   double maximumSpeed = 0.9423;	 // This is the maximum speed for the EMG30 motor which is 
-                                 // is 216 Rounds Per Minute. 
+                                 // is 170 Rounds Per Minute. 
                                  // This makes 3 Rounds per second maximum speed
                                  // Which is 0,9423 m/s
 
@@ -334,6 +334,8 @@ void calculateInternalParams ()
                                  // Wheel is 100mm diameter.
                                  // circumference is then 2 * PI * Radius ==> 314,1 mm per turn
                                  // 1000 mm / 314,1 mm * 360 ticks per round
+    maximumSpeed = max_shaft_turn_per_minute_ * wheelCircum / 60.0; // This is the maximum speed based on the motor capabilities. 
+    RCLCPP_INFO(this->get_logger(),"Maximum Motor Speed is %f ", maximumSpeed);
 }
 
 //---------------------------------------
