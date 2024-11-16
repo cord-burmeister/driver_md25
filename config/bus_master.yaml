@@ -4,15 +4,15 @@ bus_master:
     # Activate the subscription to the cmd_vel command which will be dispatched to the motor
     enable_twist: true
     # Enable the publishing of the odometry information via events.
-    enable_odom: true
+    enable_odom: false
     # Frequency to publish odometry information. Publishing will disabled, when set to 0.0
     publish_odom_frequency : 10.0
     # Enable the publishing of the motor speed information via events.
-    enable_speed: true
+    enable_speed: false
     # When enabled publish
     publish_current_speed_frequency: 10.0
     # Enable the publishing of the motor status information via events.
-    enable_status: true
+    enable_status: false
     # Frequency to publish motor status information like used current. Publishing will disabled, when set to 0.0
     publish_motor_status_frequency: 10.0
     # Acceleration Rate 
@@ -41,7 +41,7 @@ bus_master:
     # wheel diameter in meter
     wheel_diameter: 0.1
     # Activate some additional logging which might be helpful when integrating with the hardware.
-    debug_mode: false
+    debug_mode: true
 
     # with of the robot from wheel to wheel 
     width_robot: 0.33
