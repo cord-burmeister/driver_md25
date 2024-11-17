@@ -172,7 +172,7 @@ public:
     speed.push_back (static_cast<uint8_t>(rearLeftSpeed));
     speed.push_back (static_cast<uint8_t>(frontRightSpeed));
     speed.push_back (static_cast<uint8_t>(-rearRightSpeed));   
-    RCLCPP_INFO(logger, "setMotorsSpeed to %u %u %u %u  " ,static_cast<int>(speed[0]) ,static_cast<int>(speed[1]) ,static_cast<int>(speed[2) ,static_cast<int>(speed[3]));
+    RCLCPP_INFO(logger, "setMotorsSpeed to %u %u %u %u  " ,static_cast<int>(speed[0]) ,static_cast<int>(speed[1]) ,static_cast<int>(speed[2]) ,static_cast<int>(speed[3]));
     bool result = i2c_bus->writeBytesToBus (logger, this->getDeviceIdFront(), MOTOR_FIXED_SPEED_ADDR, speed);
     if (!result) {
       RCLCPP_ERROR(logger, "setMotorsSpeed: Could not set speed");
