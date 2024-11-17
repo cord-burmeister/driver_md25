@@ -132,8 +132,8 @@ public:
     std::vector<int> result;
     std::vector<int> values = i2c_bus->readIntsFromBus (logger, this->getDeviceIdFront(), MOTOR_ENCODER_TOTAL_ADDR, 4, success);
     // Arrange values based on convention
-    result.push_back(values[0]); // front left
-    result.push_back(-values[2]); // front right 
+    result.push_back(-values[0]); // front left
+    result.push_back(values[2]); // front right 
     result.push_back(values[1]); // rear left
     result.push_back(-values[3]); // rear right 
     return result;
@@ -158,10 +158,14 @@ public:
     bool success = true;
     std::vector<uint8_t> speed;
     // Arrange values based on inverted convention
-    speed.push_back (-frontLeftSpeed);
-    speed.push_back (rearLeftSpeed);
-    speed.push_back (frontRightSpeed);
-    speed.push_back (-rearRightSpeed);   
+    // There are 3 effects. 
+    // 1. The motor on the tight side have a different physical orientation
+    // 2. The connectors for one side of the robot are rotated on the controller which leads to inverted directions.
+    // 3. The default rotation direction of the motor. 
+    speed.push_back (static_cast<uint8_t>(-frontLeftSpeed));
+    speed.push_back (static_cast<uint8_t>(rearLeftSpeed));
+    speed.push_back (static_cast<uint8_t>(frontRightSpeed));
+    speed.push_back (static_cast<uint8_t>(-rearRightSpeed));   
     bool result = i2c_bus->writeBytesToBus (logger, this->getDeviceIdFront(), MOTOR_FIXED_SPEED_ADDR, speed);
     if (!result) {
       RCLCPP_ERROR(logger, "setMotorsSpeed: Could not set speed");
