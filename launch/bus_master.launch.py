@@ -48,15 +48,13 @@ def generate_launch_description():
 
     # Setup project paths
     pkg_project_bringup = get_package_share_directory('marvin3_bus')
-
+    params_file = os.path.join( pkg_project_bringup, 'config', 'bus_master.yaml' )
 
     # Bridge ROS topics and Gazebo messages for establishing communication
     busmaster = Node(
         package='marvin3_bus',
         executable='bus_master',
-        parameters=[{
-            'config_file': os.path.join(pkg_project_bringup, 'config', 'bus_master.yaml'),
-        }],
+        parameters=[params_file],
         output='screen'
     )
 

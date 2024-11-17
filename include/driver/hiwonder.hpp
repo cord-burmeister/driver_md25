@@ -114,6 +114,7 @@ public:
     if (!success) {
       RCLCPP_ERROR(logger, "getMotorsSpeed: Could not read speed");
       success = false;
+      return result;
     }
     // Arrange values based on convention
     result.push_back(values[0]); // front left
@@ -131,6 +132,11 @@ public:
   std::vector<int> readEncoders(const rclcpp::Logger logger, std::unique_ptr<I2cBus>& i2c_bus, bool & success) override {
     std::vector<int> result;
     std::vector<int> values = i2c_bus->readIntsFromBus (logger, this->getDeviceIdFront(), MOTOR_ENCODER_TOTAL_ADDR, 4, success);
+    if (!success) {
+      RCLCPP_ERROR(logger, "readEncoders: Could not read encoder data");
+      success = false;
+      return result;
+    }
     // Arrange values based on convention
     result.push_back(-values[0]); // front left
     result.push_back(values[2]); // front right 

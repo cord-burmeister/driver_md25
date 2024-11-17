@@ -58,7 +58,7 @@ private:
   const bool enable_twist_default = true;
   bool enable_twist_ = enable_twist_default;
   bool enable_status_ = false;
-  bool debug_mode_ = true;
+  bool debug_mode_ = false;
 
 
 //-----------------------------------------------
@@ -139,13 +139,14 @@ public:
 //---------------------------------------
  MD25MotorDriverROSWrapper(const rclcpp::NodeOptions & options) : Node("bus_master", options) {
 
-    this->declare_parameter<bool>("debug_mode", true);    
+    this->declare_parameter<bool>("debug_mode", false);    
 
     this->declare_parameter<double>("publish_current_speed_frequency", 10.0);
     this->declare_parameter<double>("publish_motor_status_frequency", 10.0);
     this->declare_parameter<double>("publish_odom_frequency", 10.0);
     this->declare_parameter<bool>("enable_odom", false);    
     this->declare_parameter<bool>("enable_status", false);       
+    this->declare_parameter<bool>("enable_speed", false);       
     this->declare_parameter<bool>("enable_twist", enable_twist_default);    
 
     this->declare_parameter<double>("encoder_counts_per_output_shaft_turn", 360.0);
@@ -190,30 +191,30 @@ public:
         RCLCPP_INFO(this->get_logger(), "MD25 Motor cmd_vel Subscribe Enabled");
     }
 
-//    if (enable_odom_) {
-//        odom_timer_ = this->create_wall_timer(
-//            std::chrono::duration<double>(1.0 / publish_odom_frequency_),
-//            std::bind(&MD25MotorDriverROSWrapper::publishOdom, this));
-//        odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>("odom", 10);
-//        RCLCPP_INFO(this->get_logger(), "MD25 Odom Publish Enabled");
-//    }
+   if (enable_odom_) {
+       odom_timer_ = this->create_wall_timer(
+           std::chrono::duration<double>(1.0 / publish_odom_frequency_),
+           std::bind(&MD25MotorDriverROSWrapper::publishOdom, this));
+       odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>("odom", 10);
+       RCLCPP_INFO(this->get_logger(), "MD25 Odom Publish Enabled");
+   }
 
-//    if (enable_speed_) {
-//        current_speed_timer_ = this->create_wall_timer(
-//        std::chrono::duration<double>(1.0 / publish_current_speed_frequency_),
-//        std::bind(&MD25MotorDriverROSWrapper::publishCurrentSpeed, this)
-//        );
-//        current_speed_publisher_ = this->create_publisher<std_msgs::msg::ByteMultiArray>("current_speed", 10);
-//        RCLCPP_INFO(this->get_logger(), "MD25 Motor Speed Publish Enabled");
-//    }
+   if (enable_speed_) {
+       current_speed_timer_ = this->create_wall_timer(
+       std::chrono::duration<double>(1.0 / publish_current_speed_frequency_),
+       std::bind(&MD25MotorDriverROSWrapper::publishCurrentSpeed, this)
+       );
+       current_speed_publisher_ = this->create_publisher<std_msgs::msg::ByteMultiArray>("current_speed", 10);
+       RCLCPP_INFO(this->get_logger(), "MD25 Motor Speed Publish Enabled");
+   }
 
-//    if (enable_status_) {
-//        motor_status_timer_ = this->create_wall_timer(
-//            std::chrono::duration<double>(1.0 / publish_motor_status_frequency_),
-//            std::bind(&MD25MotorDriverROSWrapper::publishMotorStatus, this));
-//        motor_status_publisher_ = this->create_publisher<std_msgs::msg::ByteMultiArray>("motor_status", 1);
-//        RCLCPP_INFO(this->get_logger(), "MD25 Motor Status Publish Enabled");
-//    }
+   if (enable_status_) {
+       motor_status_timer_ = this->create_wall_timer(
+           std::chrono::duration<double>(1.0 / publish_motor_status_frequency_),
+           std::bind(&MD25MotorDriverROSWrapper::publishMotorStatus, this));
+       motor_status_publisher_ = this->create_publisher<std_msgs::msg::ByteMultiArray>("motor_status", 1);
+       RCLCPP_INFO(this->get_logger(), "MD25 Motor Status Publish Enabled");
+   }
   }
 
 //---------------------------------------
@@ -229,9 +230,11 @@ void setParams() {
     }else{
       if(publish_current_speed_frequency_ == 0.0){
         enable_speed_ = false;
-      }else{
-        enable_speed_ = true;
       }
+      // Do not override the activation
+      // else{
+      //   enable_speed_ = true;
+      // }
     }
 
     if(!this->get_parameter("enable_status",enable_status_)){
@@ -244,9 +247,11 @@ void setParams() {
     }else{
       if(publish_motor_status_frequency_ == 0.0){
         enable_status_ = false;
-      }else{
-        enable_status_ = true;
       }
+      // Do not override the activation
+      // else{
+      //   enable_status_ = true;
+      // }
     }
 
     if(!this->get_parameter("enable_twist",enable_twist_)){
@@ -263,9 +268,11 @@ void setParams() {
     }else{
       if(publish_odom_frequency_ == 0.0){
         enable_odom_ = false;
-      }else{
-        enable_odom_ = true;
       }
+      // Do not override the activation
+      // }else{
+      //   enable_odom_ = true;
+      // }
     }
     
     // getting the motor unit parameter

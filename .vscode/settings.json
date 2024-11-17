@@ -11,5 +11,10 @@
         "/home/marvin/master3_nav_ws/install/ros_gz_interfaces/local/lib/python3.10/dist-packages",
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ],
+    "cSpell.words": [
+        "hiwonder",
+        "odometry",
+        "RCLCPP"
     ]
 }

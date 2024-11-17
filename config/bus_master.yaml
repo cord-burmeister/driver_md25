@@ -1,4 +1,3 @@
-# config/params.yaml
 bus_master:
   ros__parameters:
     # Activate the subscription to the cmd_vel command which will be dispatched to the motor
@@ -25,27 +24,33 @@ bus_master:
     # acceleration_rate: 3
 
     # Here are some values to make the conversion calculation for speed and odometry
+
+    # ---------------------------------------------------------------------------------------------------
     # Start with the motor parameter
     # Using here the values for the EMG30 Motor. See https://www.robot-electronics.co.uk/htm/emg30.htm for details.
     # The encoder counts per output shaft turn will consider the encoder values as well as the gear ratio of your motor.
-    encoder_counts_per_output_shaft_turn: 360
+    encoder_counts_per_output_shaft_turn: 360.0
     # This is the maximum number of shaft turns per minute. This will be used to calculate the maximum speed
-    max_shaft_turn_per_minute: 170 
+    max_shaft_turn_per_minute: 170.0 
 
+    # ---------------------------------------------------------------------------------------------------
     # The values for the motor driver. This is independent from the motor unit.
     # max_speed is the maximum internal value for the motor driver to control the 
     # speed of the motor based on a open loop principal driving the tick counts 
     max_speed: 100.0
 
+    # ---------------------------------------------------------------------------------------------------
     # Then some robot values 
     # wheel diameter in meter
     wheel_diameter: 0.1
-    # Activate some additional logging which might be helpful when integrating with the hardware.
-    debug_mode: true
-
     # with of the robot from wheel to wheel 
     width_robot: 0.33
     # This is the distance from center of robot to the front wheel in meter
     distance_front_wheel: 0.26
     # This is the distance from center of robot to the rear wheel in meter  
     distance_rear_wheel: 0.20
+
+    # ---------------------------------------------------------------------------------------------------
+    # Activate some additional logging which might be helpful when integrating with the hardware.
+    debug_mode: true
+
