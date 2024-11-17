@@ -177,6 +177,7 @@ public:
       RCLCPP_ERROR(logger, "setMotorsSpeed: Could not set speed");
       success = false;
     }
+    RCLCPP_INFO(logger, "setMotorsSpeed to %d " ,static_cast<int>(speed[0]) );
     return success;
   }
 
