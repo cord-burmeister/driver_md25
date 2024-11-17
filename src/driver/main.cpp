@@ -139,6 +139,8 @@ public:
 //---------------------------------------
  MD25MotorDriverROSWrapper(const rclcpp::NodeOptions & options) : Node("bus_master", options) {
 
+    this->declare_parameter<bool>("debug_mode", true);    
+
     this->declare_parameter<double>("publish_current_speed_frequency", 10.0);
     this->declare_parameter<double>("publish_motor_status_frequency", 10.0);
     this->declare_parameter<double>("publish_odom_frequency", 10.0);
@@ -188,30 +190,30 @@ public:
         RCLCPP_INFO(this->get_logger(), "MD25 Motor cmd_vel Subscribe Enabled");
     }
 
-    if (enable_odom_) {
-        odom_timer_ = this->create_wall_timer(
-            std::chrono::duration<double>(1.0 / publish_odom_frequency_),
-            std::bind(&MD25MotorDriverROSWrapper::publishOdom, this));
-        odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>("odom", 10);
-        RCLCPP_INFO(this->get_logger(), "MD25 Odom Publish Enabled");
-    }
+//    if (enable_odom_) {
+//        odom_timer_ = this->create_wall_timer(
+//            std::chrono::duration<double>(1.0 / publish_odom_frequency_),
+//            std::bind(&MD25MotorDriverROSWrapper::publishOdom, this));
+//        odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>("odom", 10);
+//        RCLCPP_INFO(this->get_logger(), "MD25 Odom Publish Enabled");
+//    }
 
-    if (enable_speed_) {
-        current_speed_timer_ = this->create_wall_timer(
-        std::chrono::duration<double>(1.0 / publish_current_speed_frequency_),
-        std::bind(&MD25MotorDriverROSWrapper::publishCurrentSpeed, this)
-        );
-        current_speed_publisher_ = this->create_publisher<std_msgs::msg::ByteMultiArray>("current_speed", 10);
-        RCLCPP_INFO(this->get_logger(), "MD25 Motor Speed Publish Enabled");
-    }
+//    if (enable_speed_) {
+//        current_speed_timer_ = this->create_wall_timer(
+//        std::chrono::duration<double>(1.0 / publish_current_speed_frequency_),
+//        std::bind(&MD25MotorDriverROSWrapper::publishCurrentSpeed, this)
+//        );
+//        current_speed_publisher_ = this->create_publisher<std_msgs::msg::ByteMultiArray>("current_speed", 10);
+//        RCLCPP_INFO(this->get_logger(), "MD25 Motor Speed Publish Enabled");
+//    }
 
-    if (enable_status_) {
-        motor_status_timer_ = this->create_wall_timer(
-            std::chrono::duration<double>(1.0 / publish_motor_status_frequency_),
-            std::bind(&MD25MotorDriverROSWrapper::publishMotorStatus, this));
-        motor_status_publisher_ = this->create_publisher<std_msgs::msg::ByteMultiArray>("motor_status", 1);
-        RCLCPP_INFO(this->get_logger(), "MD25 Motor Status Publish Enabled");
-    }
+//    if (enable_status_) {
+//        motor_status_timer_ = this->create_wall_timer(
+//            std::chrono::duration<double>(1.0 / publish_motor_status_frequency_),
+//            std::bind(&MD25MotorDriverROSWrapper::publishMotorStatus, this));
+//        motor_status_publisher_ = this->create_publisher<std_msgs::msg::ByteMultiArray>("motor_status", 1);
+//        RCLCPP_INFO(this->get_logger(), "MD25 Motor Status Publish Enabled");
+//    }
   }
 
 //---------------------------------------
@@ -593,10 +595,10 @@ int main(int argc,char **argv){
 
     rclcpp::executors::MultiThreadedExecutor executor;
     executor.add_node(node);
+    RCLCPP_INFO(node->get_logger(),"Motor Driver v0.0.1 Started");
     executor.spin();  
     node.get()->shutdown();
     rclcpp::shutdown();
 
-    RCLCPP_INFO(node->get_logger(),"Motor Driver v0.0.1 Started");
     return 0;
  }

@@ -158,9 +158,9 @@ public:
     bool success = true;
     std::vector<uint8_t> speed;
     // Arrange values based on inverted convention
-    speed.push_back (frontLeftSpeed);
+    speed.push_back (-frontLeftSpeed);
     speed.push_back (rearLeftSpeed);
-    speed.push_back (-frontRightSpeed);
+    speed.push_back (frontRightSpeed);
     speed.push_back (-rearRightSpeed);   
     bool result = i2c_bus->writeBytesToBus (logger, this->getDeviceIdFront(), MOTOR_FIXED_SPEED_ADDR, speed);
     if (!result) {
